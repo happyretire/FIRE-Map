@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>표준 노후 은퇴 계산기 | FIRE Calculator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* 한글 가독성을 위한 추가 폰트 설정 */
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="title">
+                    <i data-lucide="target" style="color: #db2777;"></i>
+                    표준 노후 은퇴 계산기
+                </h1>
+                <p class="subtitle">연간 지출액의 25배 법칙을 활용하여 경제적 자유를 위한 목표치를 계산합니다.</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-action" id="btnExport"><i data-lucide="file-text"></i> 엑셀로 저장</button>
+                <button class="btn-action" id="btnCopy"><i data-lucide="link"></i> 주소 복사</button>
+                <button class="btn-action" id="btnReset"><i data-lucide="rotate-ccw"></i> 초기화</button>
+            </div>
+        </header>
+
+        <!-- Progress Journey -->
+        <section class="card-progress">
+            <div class="progress-header">
+                <div class="progress-left">
+                    <div class="progress-label">은퇴 목표 달성 현황</div>
+                    <div class="progress-years" id="statusMessage">자산 형성이 시작되었습니다!</div>
+                </div>
+                <div class="progress-stats">
+                    <div class="progress-percent" id="percProgress">0.0%</div>
+                    <div class="progress-years" id="yearsToGo">은퇴까지 약 0년 남음</div>
+                </div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+            <div class="progress-markers">
+                <div class="marker" data-label="25%"></div>
+                <div class="marker" data-label="50%"></div>
+                <div class="marker" data-label="75%"></div>
+            </div>
+
+            <div class="progress-bottom">
+                <div>
+                    <div class="progress-val-label">현재 자산</div>
+                    <div class="progress-val" id="progressCurrent">0원</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="progress-val-label">은퇴 목표 금액</div>
+                    <div class="progress-val" id="progressTarget">0원</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Presets -->
+        <section class="presets-section">
+            <div class="presets-label"><i data-lucide="zap"></i> 투자 성향별 빠른 설정</div>
+            <div class="presets-grid">
+                <div class="preset-card" data-type="conservative">
+                    <span class="preset-icon">🐢</span>
+                    <div class="preset-info">
+                        <div class="name">안정 투자형</div>
+                        <div class="details">저축률 15%, 수익률 6%</div>
+                    </div>
+                </div>
+                <div class="preset-card" data-type="moderate">
+                    <span class="preset-icon">🏃</span>
+                    <div class="preset-info">
+                        <div class="name">균형 성장형</div>
+                        <div class="details">저축률 25%, 수익률 7%</div>
+                    </div>
+                </div>
+                <div class="preset-card" data-type="aggressive">
+                    <span class="preset-icon">🚀</span>
+                    <div class="preset-info">
+                        <div class="name">적극 공격형</div>
+                        <div class="details">저축률 50%, 수익률 7%</div>
+                    </div>
+                </div>
+                <div class="preset-card" data-type="fatfire">
+                    <span class="preset-icon">💎</span>
+                    <div class="preset-info">
+                        <div class="name">풍요로운 노후</div>
+                        <div class="details">높은 소득과 여유로운 지출</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Grid -->
+        <div class="app-grid">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="card">
+                    <h2 class="card-title">기본 정보 입력</h2>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>현재 나이 <i data-lucide="info" size="14"></i></label>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="number" id="currentAge" value="50" class="has-suffix">
+                            <span class="field-suffix">세</span>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>목표 은퇴 나이 <i data-lucide="info" size="14"></i></label>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="number" id="targetAge" value="65" class="has-suffix">
+                            <span class="field-suffix">세</span>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>현재 총 자산 <i data-lucide="info" size="14"></i></label>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="currentSavings" value="100,000" class="has-suffix monetary-input">
+                            <span class="field-suffix">천원</span>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>추가 저축액 <i data-lucide="info" size="14"></i></label>
+                            <span class="toggle-link" data-target="contribution">연간 ↔ 월간</span>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="annualContribution" value="24,000" class="has-suffix monetary-input">
+                            <span class="field-suffix" id="contribSuffix">천원/년</span>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>연간 총 소득 (세후) <i data-lucide="info" size="14"></i></label>
+                            <span class="toggle-link" data-target="income">연간 ↔ 월간</span>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="annualIncome" value="72,000" class="has-suffix monetary-input">
+                            <span class="field-suffix" id="incomeSuffix">천원/년</span>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>은퇴 후 연간 생활비 <i data-lucide="info" size="14"></i></label>
+                            <span class="toggle-link" data-target="expenses">연간 ↔ 월간</span>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="annualExpenses" value="48,000" class="has-suffix monetary-input">
+                            <span class="field-suffix" id="expenseSuffix">천원/년</span>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>기대 수익률 <i data-lucide="info" size="14"></i></label>
+                        </div>
+                        <div class="slider-row">
+                            <input type="number" id="inputExpectedReturn" value="7.0" step="0.1"
+                                class="slider-val-input">
+                            <span class="field-suffix" style="position:static; margin-left:-3.5rem;">%</span>
+                            <input type="range" id="sliderExpectedReturn" min="1" max="15" step="0.1" value="7">
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>물가 상승률 <i data-lucide="info" size="14"></i></label>
+                        </div>
+                        <div class="slider-row">
+                            <input type="number" id="inputInflationRate" value="3.0" step="0.1"
+                                class="slider-val-input">
+                            <span class="field-suffix" style="position:static; margin-left:-3.5rem;">%</span>
+                            <input type="range" id="sliderInflationRate" min="0" max="10" step="0.1" value="3">
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label>안전 인출률 (SWR) <i data-lucide="info" size="14"></i></label>
+                        </div>
+                        <div class="slider-row">
+                            <input type="number" id="inputSWR" value="4.0" step="0.1" class="slider-val-input">
+                            <span class="field-suffix" style="position:static; margin-left:-3.5rem;">%</span>
+                            <input type="range" id="sliderSWR" min="1" max="10" step="0.1" value="4">
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Results -->
+            <main class="content">
+                <div class="results-grid">
+                    <div class="result-card highlight">
+                        <div class="res-label">은퇴 목표 금액</div>
+                        <div class="res-value" id="resFireNumber">0원</div>
+                        <div class="res-subtext">필요 자산 규모</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="res-label">은퇴까지 남은 시간</div>
+                        <div class="res-value" id="resYearsToFire">0년</div>
+                        <div class="res-subtext" id="resAgeAtFire">0세에 달성 예상</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="res-label">저축률</div>
+                        <div class="res-value" id="resSavingsRate">0.0%</div>
+                        <div class="res-subtext" id="resContribPerMonth">월 0원 저축</div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3 class="chart-title">자산 성장 전망 그래프</h3>
+                    <div class="chart-container">
+                        <canvas id="fireChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="understanding-card">
+                    <h3>내 은퇴 준비 진단</h3>
+                    <div id="understandingText">
+                        값을 입력하면 구체적인 진단 내용이 여기에 표시됩니다.
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Disclaimer -->
+        <footer class="disclaimer">
+            <div class="disclaimer-title"><i data-lucide="alert-triangle" size="14"></i> 주의사항</div>
+            <p>본 계산기는 <strong>교육 및 참고용 정보</strong>를 제공하기 위한 것이며, 금융, 투자, 세무 또는 법률적 자문이 아닙니다.</p>
+            <p>표시된 결과는 입력하신 수치와 미래 수익률, 물가 상승률 등에 대한 가정을 바탕으로 한 가상 시뮬레이션입니다. <strong>실제 결과는 다를 수 있으며</strong>, 과거의 실적이
+                미래의 수익을 보장하지 않습니다.</p>
+            <p>중요한 재무적 결정을 내리기 전에는 반드시 공인 재무 설계사 등 전문가와 상담하시기 바랍니다.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
