@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>표준 은퇴 계산기 | FIRE Calculator</title>
+    <title>파이어맵 (FIRE Map) | 은퇴 설계 네비게이션</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,7 @@
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <style>
         /* 한글 가독성을 위한 추가 폰트 설정 */
         body {
@@ -28,10 +29,14 @@
             <div class="header-left">
                 <h1 class="title">
                     <i data-lucide="target" style="color: var(--primary);"></i>
-                    표준 은퇴 계산기
+                    파이어맵 (FIRE Map)
                 </h1>
             </div>
             <div class="header-actions">
+                <button class="btn-action" id="btnTheme" title="테마 변경">
+                    <i data-lucide="moon" class="theme-icon-dark"></i>
+                    <i data-lucide="sun" class="theme-icon-light" style="display: none;"></i>
+                </button>
                 <button class="btn-action" id="btnExport"><i data-lucide="file-text"></i> 엑셀로 저장</button>
                 <button class="btn-action" id="btnCopy"><i data-lucide="link"></i> 주소 복사</button>
                 <button class="btn-action" id="btnReset"><i data-lucide="rotate-ccw"></i> 초기화</button>
@@ -72,33 +77,6 @@
             </div>
         </section>
 
-        <!-- Presets -->
-        <section class="presets-section">
-            <div class="presets-label"><i data-lucide="zap"></i> 투자 성향별 빠른 설정</div>
-            <div class="presets-grid">
-                <div class="preset-card" data-type="conservative">
-                    <span class="preset-icon">🐢</span>
-                    <div class="preset-info">
-                        <div class="name">안정 투자형</div>
-                        <div class="details">저축률 15%, 수익률 6%</div>
-                    </div>
-                </div>
-                <div class="preset-card" data-type="moderate">
-                    <span class="preset-icon">🏃</span>
-                    <div class="preset-info">
-                        <div class="name">균형 성장형</div>
-                        <div class="details">저축률 25%, 수익률 7%</div>
-                    </div>
-                </div>
-                <div class="preset-card" data-type="aggressive">
-                    <span class="preset-icon">🚀</span>
-                    <div class="preset-info">
-                        <div class="name">적극 공격형</div>
-                        <div class="details">저축률 50%, 수익률 7%</div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
         <div class="section-title">
             <i data-lucide="compass"></i> 은퇴 자산 인출 전략
@@ -203,8 +181,8 @@
                                         data-lucide="wallet" size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="currentSavings" value="300,000" class="has-suffix monetary-input">
-                            <span class="field-suffix">천원</span>
+                            <input type="text" id="currentSavings" value="20,000" class="has-suffix monetary-input">
+                            <span class="field-suffix">만원</span>
                         </div>
                     </div>
 
@@ -214,47 +192,49 @@
                                         data-lucide="banknote" size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="annualIncome" value="75,000" class="has-suffix monetary-input">
-                            <span class="field-suffix" id="incomeSuffix">천원/년</span>
+                            <input type="text" id="annualIncome" value="7,500" class="has-suffix monetary-input">
+                            <span class="field-suffix" id="incomeSuffix">만원/년</span>
                         </div>
                     </div>
 
                     <div class="input-block">
                         <div class="label-row">
-                            <label>추가 저축액 <span class="help-icon" title="현재 소득에서 매월 추가로 저축 또는 투자할 수 있는 금액"><i
+                            <label>연간 추가 저축액 <span class="help-icon" title="은퇴 시점까지 매년 저축 또는 투자할 수 있는 금액"><i
                                         data-lucide="piggy-bank" size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="annualContribution" value="2,000" class="has-suffix monetary-input">
-                            <span class="field-suffix" id="contribSuffix">천원/월</span>
+                            <input type="text" id="annualContribution" value="2,400" class="has-suffix monetary-input">
+                            <span class="field-suffix" id="contribSuffix">만원/년</span>
                         </div>
                     </div>
 
                     <div class="input-block">
                         <div class="label-row">
-                            <label>은퇴 후 월 기본 생활비 <span class="help-icon" title="은퇴 후 매달 지출할 것으로 예상되는 기본적인 생활비"><i
-                                        data-lucide="shopping-cart" size="14"></i></span></label>
+                            <label>은퇴 후 월 기본 생활비 (현재가) <span class="help-icon"
+                                    title="은퇴 후 매달 지출할 것으로 예상되는 기본적인 생활비 (물가 상승은 자동 반영됨)"><i data-lucide="shopping-cart"
+                                        size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="annualExpenses" value="5,000" class="has-suffix monetary-input">
-                            <span class="field-suffix" id="expenseSuffix">천원/월</span>
+                            <input type="text" id="annualExpenses" value="500" class="has-suffix monetary-input">
+                            <span class="field-suffix" id="expenseSuffix">만원/월</span>
                         </div>
                     </div>
 
                     <div class="input-block">
                         <div class="label-row">
-                            <label>은퇴 후 월 예상 연금 <span class="help-icon" title="국민연금, 퇴직연금 등 매월 고정적으로 수령할 연금액"><i
-                                        data-lucide="landmark" size="14"></i></span></label>
+                            <label>은퇴 후 월 예상 연금 (현재가) <span class="help-icon"
+                                    title="국민연금 등 물가에 연동되는 공적 연금을 현재 가치로 입력"><i data-lucide="landmark"
+                                        size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="monthlyPension" value="3,000" class="has-suffix monetary-input">
-                            <span class="field-suffix">천원/월</span>
+                            <input type="text" id="monthlyPension" value="300" class="has-suffix monetary-input">
+                            <span class="field-suffix">만원/월</span>
                         </div>
                     </div>
 
                     <div class="input-block">
                         <div class="label-row">
-                            <label>미래 목돈 수입/지출 추가 <span class="help-icon"
+                            <label>미래 목돈 지출/수입 추가 <span class="help-icon"
                                     title="자녀 결혼 자금, (명예)퇴직금, 주택 이전 등 미래에 계획된 대규모 수입/지출 항목"><i data-lucide="calendar"
                                         size="14"></i></span></label>
                         </div>
@@ -263,18 +243,23 @@
                             <button type="button" class="type-btn active" data-type="expense">지출 (-)</button>
                             <button type="button" class="type-btn" data-type="income">수입 (+)</button>
                         </div>
-                        <div class="future-expenses-input-row">
-                            <input type="text" id="expName" placeholder="명칭" class="future-input-name"
-                                style="flex: 1.2;">
-                            <div class="input-field-wrapper" style="flex: 0.8;">
-                                <input type="number" id="expAge" placeholder="나이" value="50"
-                                    class="has-suffix future-input-age">
-                                <span class="field-suffix compact">세</span>
+                        <div class="future-expenses-grid">
+                            <div class="future-row">
+                                <input type="text" id="expName" placeholder="예: 자녀결혼, 퇴직금 등" class="future-input-name">
+                                <div class="input-field-wrapper age-wrapper">
+                                    <input type="number" id="expAge" placeholder="나이" value="50"
+                                        class="has-suffix future-input-age">
+                                    <span class="field-suffix compact">세</span>
+                                </div>
                             </div>
-                            <input type="text" id="expAmount" placeholder="금액"
-                                class="monetary-input future-input-amount" style="flex: 1.2;">
-                            <button id="btnAddExp" class="btn-add-future"
-                                style="flex: 0.8; min-width: 60px;">추가</button>
+                            <div class="future-row">
+                                <div class="input-field-wrapper amount-wrapper">
+                                    <input type="text" id="expAmount" placeholder="금액 입력"
+                                        class="monetary-input future-input-amount">
+                                    <span class="field-suffix">만원</span>
+                                </div>
+                                <button id="btnAddExp" class="btn-add-future">추가하기</button>
+                            </div>
                         </div>
                         <div id="futureExpensesList">
                             <!-- 추가된 목돈 지출 목록이 여기에 표시됨 -->
@@ -359,10 +344,9 @@
         <!-- Disclaimer -->
         <footer class="disclaimer">
             <div class="disclaimer-title"><i data-lucide="alert-triangle" size="14"></i> 주의사항</div>
-            <p>본 계산기는 <strong>교육 및 참고용 정보</strong>를 제공하기 위한 것이며, 금융, 투자, 세무 또는 법률적 자문이 아닙니다.</p>
-            <p>표시된 결과는 입력하신 수치와 미래 수익률, 물가 상승률 등에 대한 가정을 바탕으로 한 가상 시뮬레이션입니다. <strong>실제 결과는 다를 수 있으며</strong>, 과거의 실적이
-                미래의 수익을 보장하지 않습니다.</p>
-            <p>중요한 재무적 결정을 내리기 전에는 반드시 공인 재무 설계사 등 전문가와 상담하시기 바랍니다.</p>
+            <p>본 계산기는 <strong>교육 및 참고용 정보</strong>를 제공하기 위한 것이며, 금융, 투자, 세무 또는 법률적 자문이 아닙니다. 표시된 결과는 입력하신 수치와 미래 수익률, 물가
+                상승률 등에 대한 가정을 바탕으로 한 가상 시뮬레이션입니다. <strong>실제 결과는 다를 수 있으며</strong>, 과거의 실적이
+                미래의 수익을 보장하지 않습니다. 중요한 재무적 결정을 내리기 전에는 반드시 공인 재무 설계사 등 전문가와 상담하시기 바랍니다.</p>
         </footer>
     </div>
 

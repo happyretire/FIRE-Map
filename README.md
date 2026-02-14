@@ -1,138 +1,45 @@
-# 🔥 FIRE Calculators
+# 🧭 파이어맵 (FIRE Map) | 은퇴 설계 네비게이션
 
-A **private**, **offline-first** FIRE (Financial Independence, Retire Early) calculator. Calculate your path to financial freedom with 6 different calculator types—all running 100% in your browser.
-
-![FIRE Calculators](https://img.shields.io/badge/FIRE-Calculator-orange)
-![Privacy First](https://img.shields.io/badge/Privacy-First-green)
-![Offline Ready](https://img.shields.io/badge/Offline-Ready-blue)
-
-## ✨ Features
-
-### 🔒 Privacy First
-- **No cookies** - We don't use any cookies for tracking
-- **Automatic saving** - Your calculator inputs are saved in your browser for convenience
-- **Local storage only** - Data never leaves your device (stored in browser localStorage)
-- **UI preferences only in the past** - Now also includes calculator inputs for seamless experience
-- **No analytics** - Zero tracking scripts
-- **No servers** - All calculations run client-side
-- **URL-based sharing** - Share your calculations via URL when you want to (your choice!)
-
-### 📱 Works Offline
-After first load, the app works completely offline. Install it as a PWA on your device for the best experience.
-
-### 🧮 9 Calculators
-
-| Calculator | Description |
-|------------|-------------|
-| 🎯 **Standard FIRE** | Classic 25x expenses rule - calculate your "magic number" |
-| ⛵ **Coast FIRE** | Find how much you need so compound growth does the rest |
-| 🌿 **Lean FIRE** | Achieve FI faster with a minimalist lifestyle (≤$40k/year) |
-| 💎 **Fat FIRE** | Retire in style without compromising ($100k+/year) |
-| ☕ **Barista FIRE** | Blend part-time work with portfolio income |
-| 📊 **Withdrawal Rate** | Test portfolio longevity at different withdrawal rates |
-| 🧮 **Savings Rate** | Calculate how your savings rate impacts time to FIRE |
-| 🔄 **Reverse FIRE** | Work backwards - set target age, find required savings |
-| 🏥 **Healthcare Gap** | Estimate costs between early retirement and Medicare |
-
-### 🎨 Beautiful Design
-- Clean, modern interface
-- Dark mode with system preference detection
-- Fully responsive (mobile, tablet, desktop)
-- Interactive charts powered by Recharts
-- Progress bars showing your journey to FIRE
-- Quick presets for common scenarios
-
-## 🚀 Getting Started
-
-### Visit the Live Site
-[https://myfirenumber.com](https://myfirenumber.com)
-
-### Run Locally
-
-```bash
-# Clone the repository
-git clone https://github.com/jamesmontemagno/app-fire-calculator.git
-cd app-fire-calculator
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
-
-## 🛠️ Tech Stack
-
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Tailwind CSS v4** - Styling
-- **React Router v7** - Routing & URL state
-- **Recharts** - Charts
-- **vite-plugin-pwa** - Offline support
-
-## 📐 FIRE Calculations
-
-### Standard FIRE Number
-```
-FIRE Number = Annual Expenses / Withdrawal Rate
-```
-Example: $48,000 / 0.04 = **$1,200,000**
-
-### Coast FIRE Number
-```
-Coast Number = FIRE Number / (1 + Real Return)^Years
-```
-
-### Barista FIRE Number
-```
-Barista Number = (Annual Expenses - Part-Time Income) / Withdrawal Rate
-```
-
-## 🔗 Data Storage & Sharing
-
-### Local Storage
-Your calculator inputs are automatically saved in your browser's local storage for convenience:
-- **Persists across sessions** - Your values are remembered when you return
-- **Never leaves your device** - All data stays in your browser
-- **URL takes precedence** - Opening a link with parameters overrides saved values
-- **Easy to clear** - Use the Reset button to clear both URL and saved data
-
-### URL State
-All calculator inputs can also be stored in the URL. This means:
-- ✅ Bookmark your calculations
-- ✅ Share links with specific values (saved data is NOT shared in links)
-- ✅ Browser back/forward works
-- ✅ URL parameters override saved values
-
-Example URL:
-```
-/standard?age=30&retire=55&savings=100000&contrib=24000&expenses=48000
-```
-
-### What's Stored?
-The app stores only:
-1. **Calculator inputs** (ages, income, savings, etc.) - in localStorage
-2. **Theme preference** (light/dark mode) - in localStorage
-3. **Sidebar state** (open/closed) - in localStorage
-
-**No tracking, no analytics, no cookies, no external storage.**
-
-## 📝 License
-
-MIT License - Feel free to use, modify, and distribute.
-
-## 🙏 Acknowledgments
-
-- The FIRE community for spreading financial literacy
-- Trinity Study for the 4% rule research
-- All open-source contributors
+**파이어맵(FIRE Map)**은 당신의 경제적 자유(FIRE)를 향한 여정을 정밀한 데이터로 그려주는 스마트 은퇴 시뮬레이터입니다. 단순한 계산기를 넘어, 복리 수익과 물가 상승률을 반영한 구체적인 미래 자산 변화를 한눈에 확인하세요.
 
 ---
 
-**Built with ❤️ for the FIRE community**
+## ✨ 주요 기능
 
-*Remember: This calculator provides estimates for educational purposes. Consult a financial advisor for personalized advice.*
+- **📊 정밀한 월 단위 복리 시뮬레이션**: 연 단위가 아닌 월 단위로 자산 성장과 인출을 계산하여 금융 현실에 더 가까운 결과를 제공합니다.
+- **🌗 스마트 테마 (다크/라이트)**: 어떤 환경에서도 눈이 편안하도록 최적화된 테마를 제공합니다. 시스템 설정에 따라 자동 전환되거나 수동으로 바꿀 수 있습니다.
+- **📱 완벽한 반응형 디자인**: 모바일, 태블릿, 데스크탑 등 어떤 기기에서도 최적화된 UI로 편리하게 입력하고 확인할 수 있습니다.
+- **💼 미래 목돈(이벤트) 설정**: 결혼, 내 집 마련, 상속 등 인생의 주요 변곡점을 미리 입력하여 자산 흐름에 반영할 수 있습니다.
+- **📥 엑셀(CSV) 내보내기**: 계산된 시뮬레이션 데이터를 엑셀 파일로 저장하여 나만의 자산 관리 장부로 활용하세요.
+- **💾 자동 저장 및 공유**: 입력한 데이터는 브라우저에 안전하게 저장되며, 주소 복사 기능을 통해 현재 설정 그대로 공유할 수 있습니다.
+
+---
+
+## 🚀 사용 방법
+
+1.  **기본 정보 입력**: 현재 나이, 은퇴 목표 나이, 그리고 현재 모아둔 자산을 입력하세요 (단위: 만원).
+2.  **수입과 지출 설정**: 연간 수입과 저축액, 그리고 은퇴 후 예상되는 생활비를 입력합니다.
+3.  **변수 조정**: 기대 수익률과 물가 상승률을 설정하세요. 이 앱은 실질 수익률(기대 수익률 - 물가 상승률)을 기반으로 자산의 구매력을 평가합니다.
+4.  **전망 확인**: 상단의 **목표 달성 현황** 바와 하단의 **자산 성장 전망 그래프**를 통해 내가 언제 FIRE를 달성할 수 있는지 확인하세요.
+5.  **전략 수정**: 목표 달성이 어렵다면 은퇴 시점을 늦추거나, 수익률을 조정한 후 즉시 반영되는 진단 내용을 확인해보세요.
+
+---
+
+## 📖 주요 용어 설명
+
+- **만원 단위**: 모든 금액 입력은 한국인에게 가장 직관적인 '만원' 단위로 이루어집니다 (예: 1억 원 = 10,000 입력).
+- **실질 가치 (구매력 기준)**: 물가 상승률을 뺀 실제 돈의 가치입니다. 20년 뒤의 1억 원이 지금의 얼마만큼의 가치인지를 보여줍니다.
+- **원금 보존형**: 은퇴 후에도 자산의 원금을 줄이지 않고 이자만으로 생활하는 가장 여유로운 모델입니다.
+- **자산 고갈형**: 목표로 한 기대 수명까지 자산을 조금씩 인출하여 사용하는 모델입니다.
+
+---
+
+## 📜 라이선스 및 저작권
+
+- **creator**: ⓒ Dunam
+- **카페 링크**: [cafe.naver.com/retireclass](https://cafe.naver.com/retireclass)
+- **이용 안내**: 본 프로그램은 자유롭게 사용 및 배포가 가능합니다. ✅
+
+---
+
+**당신의 빛나는 은퇴 설계, 파이어맵이 함께합니다.** 🔥🧭
