@@ -483,7 +483,7 @@ const Logic = {
         Renderer.updateResultIndicators(fireAge, targetAge, currentAge, fireNumber, balanceAdjusted, currentSavings);
 
         let suggestion = null;
-        if (fireAge === null || fireAge > targetAge) {
+        if ((fireAge === null || fireAge > targetAge) && currentSavings < fireNumber) {
             const yearsLeft = targetAge - currentAge;
             if (yearsLeft > 0) {
                 const r = realReturn / 12, n = yearsLeft * 12;
