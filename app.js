@@ -123,6 +123,26 @@ const Utils = {
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         return this.dateDiffInYears(birthDateStr, todayStr);
+    },
+
+    formatAge(age) {
+        if (typeof age !== 'number') return '0.0';
+        return age.toFixed(1);
+    },
+
+    animateNumber(el, target, duration = 500, formatter = (v) => v) {
+        const start = parseFloat(el.getAttribute('data-val')) || 0;
+        const startTime = performance.now();
+
+        const update = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const current = start + (target - start) * progress;
+            el.textContent = formatter(current);
+            el.setAttribute('data-val', current);
+            if (progress < 1) requestAnimationFrame(update);
+        };
+        requestAnimationFrame(update);
     }
 };
 
@@ -132,26 +152,26 @@ const Renderer = {
         const d = UI.displays;
         if (fireAge !== null) {
             const yearsToFire = fireAge - currentAge;
-            d.yearsToFire.textContent = yearsToFire + '년';
-            d.ageAtFire.textContent = `${fireAge}세에 목표 달성 예상`;
-            d.yearsToGo.textContent = `목표 은퇴일(${targetAge}세)까지 넉넉합니다`;
+            d.yearsToFire.textContent = Utils.formatAge(yearsToFire) + '년';
+            d.ageAtFire.textContent = `${Utils.formatAge(fireAge)}세에 목표 달성 예상`;
+            d.yearsToGo.textContent = `목표 은퇴일(${Utils.formatAge(targetAge)}세)까지 넉넉합니다`;
             d.statusMessage.textContent = '현재 계획대로면 조기 은퇴도 가능해 보입니다!';
         } else {
             if (currentSavings >= fireNumber) {
-                d.yearsToFire.textContent = '0년';
+                d.yearsToFire.textContent = '0.0년';
                 d.ageAtFire.textContent = '목표 달성 완료';
                 d.yearsToGo.textContent = '이미 충분한 자산을 확보하셨습니다';
                 d.statusMessage.textContent = '축하합니다! 경제적 자유를 이루셨습니다.';
             } else {
                 d.yearsToFire.textContent = '목표 미달성';
-                d.ageAtFire.textContent = `${targetAge}세 시점에 부족 예상`;
+                d.ageAtFire.textContent = `${Utils.formatAge(targetAge)}세 시점에 부족 예상`;
                 d.yearsToGo.textContent = '저축액을 높이거나 목표를 조정해 보세요';
                 d.statusMessage.textContent = '목표 달성을 위해 조금 더 분발이 필요합니다.';
             }
         }
 
         const progress = fireNumber > 0 ? Math.min((currentSavings / fireNumber) * 100, 100) : 0;
-        d.percProgress.textContent = progress.toFixed(1) + '%';
+        Utils.animateNumber(d.percProgress, progress, 500, (v) => v.toFixed(1) + '%');
         d.progressBar.style.width = progress + '%';
     },
 
@@ -163,18 +183,18 @@ const Renderer = {
         else if (currentRate === 0) modelName = "원금 완전 고갈 모델";
         else modelName = `원금 일부 고갈 모델 (${currentRate}% 유지)`;
 
-        const progress = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : 0;
+        const progressNum = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : 0;
         const bridgePeriod = Math.max(0, pensionStartAge - targetAge);
         const bridgeText = bridgePeriod > 0
-            ? `<p>은퇴 후 약 <strong>${bridgePeriod.toFixed(1)}년</strong> 동안은 연금 없이 생활비 전액을 자산에서 충당해야 합니다.</p>`
+            ? `<p>은퇴 후 약 <strong>${Utils.formatAge(bridgePeriod)}년</strong> 동안은 연금 없이 생활비 전액을 자산에서 충당해야 합니다.</p>`
             : "";
 
         let html = `
             <p>선택하신 전략은 <strong>'${modelName}'</strong>입니다.</p>
             ${bridgeText}
-            <p>은퇴 후 월 부족분(${Utils.formatKoreanCurrency(monthlyGap)})을 충당하며 <strong>${lifeExpectancy.toFixed(1)}세</strong>까지 자산 가치를 유지하기 위해 
-            은퇴 시점(<strong>${targetAge.toFixed(1)}세</strong>)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
-            <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progress.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
+            <p>은퇴 후 월 부족분(${Utils.formatKoreanCurrency(monthlyGap)})을 충당하며 <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해 
+            은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
+            <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
         `;
 
         if (suggestion) {
@@ -189,28 +209,28 @@ const Renderer = {
             if (suggestion.extraMonthly) {
                 const extraAnnual = suggestion.extraMonthly * 12;
                 html += `
-                    <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5;">
-                        💡 <strong>방법 A: 매달 ${Utils.formatKoreanCurrency(suggestion.extraMonthly)}(연간 ${Utils.formatKoreanCurrency(extraAnnual)})</strong>를 더 저축하면 계획대로 <strong>${targetAge.toFixed(1)}세</strong>에 은퇴가 가능합니다.
-                    </li>
-                `;
+                        <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5;">
+                            💡 <strong>방법 A: 매달 ${Utils.formatKoreanCurrency(suggestion.extraMonthly)}(연간 ${Utils.formatKoreanCurrency(extraAnnual)})</strong>를 더 저축하면 계획대로 <strong>${Utils.formatAge(targetAge)}세</strong>에 은퇴가 가능합니다.
+                        </li>
+                    `;
             }
 
             if (suggestion.extraReturn && suggestion.extraReturn < 20) {
                 html += `
-                    <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5;">
-                        💡 <strong>방법 B:</strong> 연평균 수익률을 <strong>${suggestion.extraReturn.toFixed(1)}%p</strong> 더 높일 수 있는 투자 포트폴리오를 고려해 보세요.
-                    </li>
-                `;
+                        <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5;">
+                            💡 <strong>방법 B:</strong> 연평균 수익률을 <strong>${suggestion.extraReturn.toFixed(1)}%p</strong> 더 높일 수 있는 투자 포트폴리오를 고려해 보세요.
+                        </li>
+                    `;
             }
 
             if (suggestion.achievableAge) {
                 const delayYears = suggestion.achievableAge - targetAge;
                 const style = delayYears > 10 ? "color: #b91c1c; font-weight: 700;" : "";
                 html += `
-                    <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5; border-top: 1px dashed #fed7aa; padding-top: 0.75rem; margin-top: 0.5rem;">
-                        ⚠️ <strong>차선책:</strong> 은퇴 시점을 <strong>${suggestion.achievableAge.toFixed(1)}세</strong>로 조정하세요. <span style="${style}">(은퇴 ${delayYears.toFixed(1)}년 연기)</span>
-                    </li>
-                `;
+                        <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5; border-top: 1px dashed #fed7aa; padding-top: 0.75rem; margin-top: 0.5rem;">
+                            ⚠️ <strong>차선책:</strong> 은퇴 시점을 <strong>${Utils.formatAge(suggestion.achievableAge)}세</strong>로 조정하세요. <span style="${style}">(은퇴 ${Utils.formatAge(delayYears)}년 연기)</span>
+                        </li>
+                    `;
             } else if (suggestion.neverReached && !suggestion.extraMonthly && !suggestion.extraReturn) {
                 html += `
                     <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5; border-top: 1px dashed #fed7aa; padding-top: 0.75rem; margin-top: 0.5rem;">
@@ -231,15 +251,6 @@ const Renderer = {
 
     updateChart(labels, balances, balancesAdjusted, target, fireAge, targetAge) {
         const ctx = document.getElementById('fireChart').getContext('2d');
-        if (UI.chart) UI.chart.destroy();
-
-        const gradientNominal = ctx.createLinearGradient(0, 0, 0, 400);
-        gradientNominal.addColorStop(0, 'rgba(14, 165, 233, 0.2)');
-        gradientNominal.addColorStop(1, 'rgba(14, 165, 233, 0)');
-
-        const gradientReal = ctx.createLinearGradient(0, 0, 0, 400);
-        gradientReal.addColorStop(0, 'rgba(2, 132, 199, 0.1)');
-        gradientReal.addColorStop(1, 'rgba(2, 132, 199, 0)');
 
         const annotations = {
             workingPhase: {
@@ -252,7 +263,7 @@ const Renderer = {
             },
             retirementLine: {
                 type: 'line', xMin: targetAge, xMax: targetAge, borderColor: 'rgba(100, 116, 139, 0.3)', borderWidth: 1,
-                label: { display: true, content: `${targetAge}세 은퇴`, position: 'end', backgroundColor: 'rgba(100, 116, 139, 0.8)', font: { size: 10 } }
+                label: { display: true, content: `${Utils.formatAge(targetAge)}세 은퇴`, position: 'end', backgroundColor: 'rgba(100, 116, 139, 0.8)', font: { size: 10 } }
             }
         };
 
@@ -264,14 +275,23 @@ const Renderer = {
             };
         }
 
-        state.futureExpenses.forEach((exp, i) => {
-            if (labels.includes(exp.age)) {
-                annotations[`event_${i}`] = {
-                    type: 'point', xValue: exp.age, yValue: balances[labels.indexOf(exp.age)],
-                    backgroundColor: exp.amount > 0 ? '#22c55e' : '#ef4444', radius: 4
-                };
-            }
-        });
+        if (UI.chart) {
+            UI.chart.data.labels = labels;
+            UI.chart.data.datasets[0].data = balancesAdjusted;
+            UI.chart.data.datasets[1].data = balances;
+            UI.chart.data.datasets[2].data = labels.map(() => target);
+            UI.chart.options.plugins.annotation.annotations = annotations;
+            UI.chart.update('none'); // 정적 업데이트 (깜빡임 방지)
+            return;
+        }
+
+        const gradientNominal = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientNominal.addColorStop(0, 'rgba(14, 165, 233, 0.2)');
+        gradientNominal.addColorStop(1, 'rgba(14, 165, 233, 0)');
+
+        const gradientReal = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientReal.addColorStop(0, 'rgba(2, 132, 199, 0.1)');
+        gradientReal.addColorStop(1, 'rgba(2, 132, 199, 0)');
 
         UI.chart = new Chart(ctx, {
             type: 'line',
@@ -292,7 +312,10 @@ const Renderer = {
                         padding: 12, backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569',
                         borderColor: '#e2e8f0', borderWidth: 1, titleFont: { weight: 'bold', size: 14, family: 'Noto Sans KR' },
                         bodyFont: { family: 'Noto Sans KR' },
-                        callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatKoreanCurrency(ctx.raw)}` }
+                        callbacks: {
+                            title: (items) => `${parseFloat(items[0].label).toFixed(1)}세`,
+                            label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatKoreanCurrency(ctx.raw)}`
+                        }
                     },
                     annotation: { annotations: annotations }
                 },
@@ -315,6 +338,10 @@ const Renderer = {
                         },
                         ticks: {
                             color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#94a3b8' : '#64748b',
+                            callback: function (value) {
+                                const label = this.getLabelForValue(value);
+                                return (typeof label === 'number') ? parseFloat(label).toFixed(1) : label;
+                            },
                             maxRotation: 0, autoSkip: true, maxTicksLimit: 10
                         }
                     }
@@ -563,7 +590,14 @@ const App = {
                 if (input.id === 'pensionStartDate') state.pensionDateTouched = true;
                 let val = e.target.value.replace(/[^0-9]/g, '');
                 if (val.length > 4) {
-                    val = val.substring(0, 4) + '-' + val.substring(4, 6);
+                    let year = val.substring(0, 4);
+                    let month = val.substring(4, 6);
+                    if (month.length === 2) {
+                        const m = parseInt(month);
+                        if (m < 1) month = '01';
+                        if (m > 12) month = '12';
+                    }
+                    val = year + '-' + month;
                 }
                 e.target.value = val.substring(0, 7);
             });
@@ -650,7 +684,8 @@ const App = {
         const name = nameIn.value || (type === 'income' ? '기타 수입' : '기타 지출');
         const age = parseInt(ageIn.value), amt = Utils.parseNum(amtIn.value) * 10000;
 
-        if (!age || age < parseInt(UI.inputs.currentAge.value)) return alert('나이 설정을 확인해주세요.');
+        const currentAge = Utils.getCurrentAge(UI.inputs.birthDate.value);
+        if (!age || age < currentAge) return alert('나이 설정을 확인해주세요.');
         if (amt > 0) {
             state.futureExpenses.push({ name, amount: type === 'income' ? amt : -amt, age });
             this.updateExpensesUI();

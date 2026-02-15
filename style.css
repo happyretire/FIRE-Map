@@ -1,12 +1,13 @@
 :root {
     /* Color Palette */
-    --primary: #6366f1;
-    --primary-light: #e0e7ff;
-    --primary-dark: #4338ca;
-    --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    --primary-hover: #4f46e5;
-    --accent: #818cf8;
-    --accent-light: #eef2ff;
+    /* Ocean Blue Palette */
+    --primary: #0284c7;
+    --primary-light: #e0f2fe;
+    --primary-dark: #0369a1;
+    --primary-gradient: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    --primary-hover: #0369a1;
+    --accent: #06b6d4;
+    --accent-light: #ecfeff;
 
     /* Backgrounds */
     --bg-main: #f8fafc;
@@ -56,15 +57,15 @@
     --text-muted: #94a3b8;
     --border: #334155;
     --border-hover: #475569;
-    --accent-light: rgba(99, 102, 241, 0.15);
+    --accent-light: rgba(14, 165, 233, 0.15);
     --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
 }
 
 /* Dark Mode Overrides */
 [data-theme="dark"] .result-card.highlight {
-    background: linear-gradient(135deg, #1e293b 0%, rgba(99, 102, 241, 0.2) 100%) !important;
+    background: linear-gradient(135deg, #1e293b 0%, rgba(14, 165, 233, 0.2) 100%) !important;
     border: 1.5px solid var(--primary) !important;
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.15);
 }
 
 [data-theme="dark"] input[type="range"] {
