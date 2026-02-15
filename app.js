@@ -142,7 +142,7 @@ const Renderer = {
         let html = `
             <p>선택하신 전략은 <strong>'${modelName}'</strong>입니다.</p>
             <p>은퇴 후 월 부족분(${Utils.formatKoreanCurrency(monthlyGap)})을 충당하며 <strong>${lifeExpectancy}세</strong>까지 자산 가치를 유지하기 위해 
-            은퇴 시점(${targetAge}세)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>가 필요합니다.</p>
+            은퇴 시점(${targetAge}세)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
             <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progress.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
         `;
 
