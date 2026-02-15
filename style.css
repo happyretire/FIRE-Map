@@ -456,7 +456,7 @@ body {
 }
 
 .age-input-compact {
-    background: #f8fafc !important;
+    background: var(--bg-input) !important;
     border: 1px solid var(--border) !important;
     font-weight: 800 !important;
 }
@@ -577,9 +577,9 @@ input[type="range"] {
     font-size: 0.9rem !important;
     font-weight: 800 !important;
     text-align: right;
-    border: 2px solid #f1f5f9 !important;
+    border: 2px solid var(--bg-accent) !important;
     border-radius: 0.75rem !important;
-    background: #f8fafc !important;
+    background: var(--bg-input) !important;
 }
 
 /* Hide Number Input Spinners (Arrows) */
