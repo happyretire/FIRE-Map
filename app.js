@@ -24,6 +24,7 @@ const UI = {
         annualIncome: document.getElementById('annualIncome'),
         annualExpenses: document.getElementById('annualExpenses'),
         monthlyPension: document.getElementById('monthlyPension'),
+        pensionStartDate: document.getElementById('pensionStartDate'),
         expectedReturn: document.getElementById('sliderExpectedReturn'),
         inflationRate: document.getElementById('sliderInflationRate')
     },
@@ -97,6 +98,17 @@ const Utils = {
         const pvFactor = (1 - Math.pow(1 + rate, -nper)) / rate;
         const fvFactor = 1 / Math.pow(1 + rate, nper);
         return (pmt * pvFactor) + (fv * fvFactor);
+    },
+
+    parseYearMonthToAge(val, currentAge) {
+        if (!val || !/^\d{4}-\d{2}$/.test(val)) return null;
+        const [startYear, startMonth] = val.split('-').map(Number);
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        const monthDiff = (startYear - currentYear) * 12 + (startMonth - currentMonth);
+        return currentAge + (monthDiff / 12);
     }
 };
 
@@ -129,7 +141,7 @@ const Renderer = {
         d.progressBar.style.width = progress + '%';
     },
 
-    updateDiagnosisText(rate, lifeExpectancy, targetAge, monthlyGap, fireNumber, currentSavings, suggestion = null) {
+    updateDiagnosisText(rate, lifeExpectancy, targetAge, pensionStartAge, monthlyGap, fireNumber, currentSavings, suggestion = null) {
         let modelName = "";
         const currentRate = rate * 100;
 
@@ -138,9 +150,14 @@ const Renderer = {
         else modelName = `원금 일부 고갈 모델 (${currentRate}% 유지)`;
 
         const progress = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : 0;
+        const bridgePeriod = Math.max(0, pensionStartAge - targetAge);
+        const bridgeText = bridgePeriod > 0
+            ? `<p>은퇴 후 약 <strong>${bridgePeriod.toFixed(1)}년</strong> 동안은 연금 없이 생활비 전액을 자산에서 충당해야 합니다.</p>`
+            : "";
 
         let html = `
             <p>선택하신 전략은 <strong>'${modelName}'</strong>입니다.</p>
+            ${bridgeText}
             <p>은퇴 후 월 부족분(${Utils.formatKoreanCurrency(monthlyGap)})을 충당하며 <strong>${lifeExpectancy}세</strong>까지 자산 가치를 유지하기 위해 
             은퇴 시점(${targetAge}세)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
             <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progress.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
@@ -312,14 +329,34 @@ const Logic = {
         const realReturn = nominalReturn - inflation;
         const preservationRate = (100 - (parseInt(UI.sliders.depletionRate.value) || 0)) / 100;
 
-        const monthlyGap = Math.max(0, monthlyExpenses - monthlyPension);
-        const annualGap = monthlyGap * 12;
-        const retiredYears = lifeExpectancy - targetAge;
+        // 연금 개시 시점 계산 및 폴백 로직
+        const startVal = u.pensionStartDate.value;
+        let pensionStartAge = Utils.parseYearMonthToAge(startVal, currentAge);
 
-        const preservationTarget = realReturn > 0 ? annualGap / realReturn : annualGap * 25;
+        // 날짜 형식이 잘못되었거나 비어있다면 은퇴 나이를 기본값으로 사용
+        if (pensionStartAge === null) {
+            pensionStartAge = targetAge;
+        }
+
+        // 은퇴 기간 시뮬레이션 및 필요 자산(fireNumber) 역산
+        // 1단계: 연금 개시 전 (생활비 전액 필요)
+        // 2단계: 연금 개시 후 (생활비 - 연금 필요)
+
+        const monthlyGapWithPension = Math.max(0, monthlyExpenses - monthlyPension);
+        const monthlyGapNoPension = monthlyExpenses;
+
+        const yearsToPension = Math.max(0, pensionStartAge - targetAge);
+        const actualPensionStart = Math.max(targetAge, pensionStartAge);
+        const yearsAfterPension = Math.max(0, lifeExpectancy - actualPensionStart);
+
+        // 연금 개시 후 시점의 목표액 (Pv_at_pension_start)
+        const preservationTarget = realReturn > 0 ? (monthlyGapWithPension * 12) / realReturn : (monthlyGapWithPension * 12) * 25;
         const finalBalanceAtEnd = preservationTarget * preservationRate;
 
-        let fireNumber = Utils.calculatePV(realReturn, retiredYears, annualGap, finalBalanceAtEnd);
+        const targetAtPensionStart = Utils.calculatePV(realReturn, yearsAfterPension, monthlyGapWithPension * 12, finalBalanceAtEnd);
+
+        // 은퇴 시점의 목표액 (fireNumber)
+        let fireNumber = Utils.calculatePV(realReturn, yearsToPension, monthlyGapNoPension * 12, targetAtPensionStart);
 
         state.futureExpenses.forEach(exp => {
             fireNumber -= exp.amount * Math.pow(1 + realReturn, targetAge - exp.age);
@@ -354,13 +391,18 @@ const Logic = {
 
             // 월 단위 정밀 시뮬레이션 (12개월 루프)
             for (let m = 0; m < 12; m++) {
+                const currentMonthAge = age + (m / 12);
                 if (age < targetAge) {
                     // 자산 형성기: 월 복리 수익 + 월 저축액
                     balance = balance * (1 + nominalReturn / 12) + monthlyContribution;
                     balanceAdjusted = balanceAdjusted * (1 + realReturn / 12) + monthlyContribution;
                 } else {
-                    // 은퇴기: 월 복리 수익 - 월 생활비 부족분
-                    balance = balance * (1 + nominalReturn / 12) - monthlyGap;
+                    // 은퇴기: 연금 개시 여부에 따른 차등 적용
+                    const isPensionStarted = currentMonthAge >= pensionStartAge;
+                    const monthlyGap = isPensionStarted ? monthlyGapWithPension : monthlyGapNoPension;
+
+                    balance = balance * (1 + nominalReturn / 12) - monthlyGap * Math.pow(1 + inflation / 12, (age - currentAge) * 12 + m);
+                    // 실질 가치 계산 시에는 물가상승률을 제외한 realReturn 사용
                     balanceAdjusted = balanceAdjusted * (1 + realReturn / 12) - monthlyGap;
                 }
             }
@@ -403,7 +445,7 @@ const Logic = {
             }
         }
 
-        Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, monthlyGap, fireNumber, currentSavings, suggestion);
+        Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, pensionStartAge, monthlyGapWithPension, fireNumber, currentSavings, suggestion);
         Renderer.updateChart(labels, balances, balancesAdjusted, fireNumber, fireAge, targetAge);
     }
 };
@@ -413,6 +455,7 @@ const App = {
     init() {
         this.loadState();
         this.initTheme(); // 테마 초기화 추가
+        this.initPensionDate(); // 연금 개시일 초기값 설정
         this.bindEvents();
         Logic.calculateFIRE();
         this.updateTooltips();
@@ -423,7 +466,15 @@ const App = {
 
         // Inputs
         Object.values(UI.inputs).forEach(el => {
-            if (el) el.addEventListener('input', trigger);
+            if (el) {
+                el.addEventListener('input', (e) => {
+                    // 은퇴 나이가 변경될 때 연금 개시일이 아직 한번도 수정되지 않았다면 동기화
+                    if (el.id === 'targetAge' && !state.pensionDateTouched) {
+                        this.initPensionDate(true);
+                    }
+                    trigger();
+                });
+            }
         });
 
         // Sliders
@@ -485,6 +536,16 @@ const App = {
 
         // 테마 토글 버튼 이벤트
         document.getElementById('btnTheme').addEventListener('click', () => this.toggleTheme());
+
+        // 연금 개시일 입력 포맷 자동 완성 (YYYY-MM)
+        UI.inputs.pensionStartDate.addEventListener('input', (e) => {
+            state.pensionDateTouched = true; // 사용자가 직접 수정했음을 기록
+            let val = e.target.value.replace(/[^0-9]/g, '');
+            if (val.length > 4) {
+                val = val.substring(0, 4) + '-' + val.substring(4, 6);
+            }
+            e.target.value = val.substring(0, 7);
+        });
     },
 
     triggerUpdate: Utils.debounce(() => {
@@ -642,6 +703,20 @@ const App = {
         Logic.calculateFIRE();
     },
 
+    initPensionDate(force = false) {
+        if (!UI.inputs.pensionStartDate.value || force) {
+            const now = new Date();
+            const currentAge = parseInt(UI.inputs.currentAge.value) || 0;
+            const targetAge = parseInt(UI.inputs.targetAge.value) || 0;
+
+            // 은퇴 나이에 해당하는 년의 1월로 설정
+            const yearsToRetire = targetAge - currentAge;
+            const retirementYear = now.getFullYear() + yearsToRetire;
+
+            UI.inputs.pensionStartDate.value = `${retirementYear}-01`;
+        }
+    },
+
     reset() { if (confirm('모든 입력값이 초기화됩니다.')) { localStorage.removeItem(CONFIG.storageKey); location.reload(); } },
 
     copyURL() {
@@ -663,6 +738,7 @@ const App = {
             ["연간 추가 저축액", UI.inputs.annualContribution.value + " (만원/년)"],
             ["은퇴 후 월 생활비", UI.inputs.annualExpenses.value + " (만원/월)"],
             ["은퇴 후 월 예상 연금", UI.inputs.monthlyPension.value + " (만원/월)"],
+            ["연금 개시년월", UI.inputs.pensionStartDate.value],
             ["--- 경제 지표 ---", ""],
             ["기대 수익률", UI.inputs.expectedReturn.value + "%"],
             ["물가 상승률", UI.inputs.inflationRate.value + "%"],

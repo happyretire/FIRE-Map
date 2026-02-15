@@ -428,6 +428,15 @@ body {
     border-top: 2px solid #f1f5f9;
 }
 
+.economic-parameters-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+    border-top: 1px dashed var(--border);
+}
+
 .sub-label {
     font-size: 0.875rem;
     color: var(--text-muted);
@@ -459,6 +468,13 @@ body {
     background: var(--bg-input) !important;
     border: 1px solid var(--border) !important;
     font-weight: 800 !important;
+}
+
+.compact-month-input {
+    padding: 0.6rem 0.8rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    cursor: pointer;
 }
 
 /* Main Layout Grid */

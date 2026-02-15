@@ -140,6 +140,46 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="economic-parameters-grid">
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label class="sub-label">기대 수익률 <span class="help-icon"
+                                    title="은퇴 전후 자산 운용을 통해 기대하는 연평균 수익률"><i data-lucide="trending-up"
+                                        size="14"></i></span></label>
+                        </div>
+                        <div class="slider-container">
+                            <div id="tooltipExpectedReturn" class="slider-tooltip">6.0%</div>
+                            <div class="slider-row">
+                                <input type="range" id="sliderExpectedReturn" min="1" max="30" step="0.1" value="6.0">
+                                <div class="slider-input-wrapper">
+                                    <input type="number" id="inputExpectedReturn" min="1" max="30" step="0.1"
+                                        value="6.0" class="slider-num-input">
+                                    <span class="slider-unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
+                            <label class="sub-label">물가 상승률 <span class="help-icon"
+                                    title="미래 화폐 가치 산정을 위한 장기 평균 물가 상승률 가정치"><i data-lucide="gauge"
+                                        size="14"></i></span></label>
+                        </div>
+                        <div class="slider-container">
+                            <div id="tooltipInflationRate" class="slider-tooltip">2.0%</div>
+                            <div class="slider-row">
+                                <input type="range" id="sliderInflationRate" min="0" max="10" step="0.1" value="2.0">
+                                <div class="slider-input-wrapper">
+                                    <input type="number" id="inputInflationRate" min="0" max="10" step="0.1" value="2.0"
+                                        class="slider-num-input">
+                                    <span class="slider-unit">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -234,6 +274,18 @@
 
                     <div class="input-block">
                         <div class="label-row">
+                            <label>연금 개시년월 <span class="help-icon"
+                                    title="연금 수령이 실제로 시작되는 년월 (국민연금의 경우 수급권 발생월의 다음 달부터 지급됨)"><i
+                                        data-lucide="calendar-days" size="14"></i></span></label>
+                        </div>
+                        <div class="input-field-wrapper">
+                            <input type="text" id="pensionStartDate" class="compact-month-input"
+                                placeholder="예: 2040-01">
+                        </div>
+                    </div>
+
+                    <div class="input-block">
+                        <div class="label-row">
                             <label>미래 목돈 지출/수입 추가 <span class="help-icon"
                                     title="자녀 결혼 자금, (명예)퇴직금, 주택 이전 등 미래에 계획된 대규모 수입/지출 항목"><i data-lucide="calendar"
                                         size="14"></i></span></label>
@@ -243,7 +295,7 @@
                             <button type="button" class="type-btn active" data-type="expense">지출 (-)</button>
                             <button type="button" class="type-btn" data-type="income">수입 (+)</button>
                         </div>
-                        <div class="future-expenses-grid">
+                        <div class="future-expenses-grid" style="margin-bottom: 2rem;">
                             <div class="future-row">
                                 <input type="text" id="expName" placeholder="예: 자녀결혼, 퇴직금 등" class="future-input-name">
                                 <div class="input-field-wrapper age-wrapper">
@@ -263,42 +315,6 @@
                         </div>
                         <div id="futureExpensesList">
                             <!-- 추가된 목돈 지출 목록이 여기에 표시됨 -->
-                        </div>
-                    </div>
-
-                    <div class="input-block">
-                        <div class="label-row">
-                            <label>기대 수익률 <span class="help-icon" title="은퇴 전후 자산 운용을 통해 기대하는 연평균 수익률"><i
-                                        data-lucide="trending-up" size="14"></i></span></label>
-                        </div>
-                        <div class="slider-container">
-                            <div id="tooltipExpectedReturn" class="slider-tooltip">6.0%</div>
-                            <div class="slider-row">
-                                <input type="range" id="sliderExpectedReturn" min="1" max="30" step="0.1" value="6.0">
-                                <div class="slider-input-wrapper">
-                                    <input type="number" id="inputExpectedReturn" min="1" max="30" step="0.1"
-                                        value="6.0" class="slider-num-input">
-                                    <span class="slider-unit">%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="input-block">
-                        <div class="label-row">
-                            <label>물가 상승률 <span class="help-icon" title="미래 화폐 가치 산정을 위한 장기 평균 물가 상승률 가정치"><i
-                                        data-lucide="gauge" size="14"></i></span></label>
-                        </div>
-                        <div class="slider-container">
-                            <div id="tooltipInflationRate" class="slider-tooltip">2.0%</div>
-                            <div class="slider-row">
-                                <input type="range" id="sliderInflationRate" min="0" max="10" step="0.1" value="2.0">
-                                <div class="slider-input-wrapper">
-                                    <input type="number" id="inputInflationRate" min="0" max="10" step="0.1" value="2.0"
-                                        class="slider-num-input">
-                                    <span class="slider-unit">%</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -341,12 +357,22 @@
             </main>
         </div>
 
-        <!-- Disclaimer -->
+        <!-- Disclaimer & Copyright -->
         <footer class="disclaimer">
             <div class="disclaimer-title"><i data-lucide="alert-triangle" size="14"></i> 주의사항</div>
             <p>본 계산기는 <strong>교육 및 참고용 정보</strong>를 제공하기 위한 것이며, 금융, 투자, 세무 또는 법률적 자문이 아닙니다. 표시된 결과는 입력하신 수치와 미래 수익률, 물가
                 상승률 등에 대한 가정을 바탕으로 한 가상 시뮬레이션입니다. <strong>실제 결과는 다를 수 있으며</strong>, 과거의 실적이
                 미래의 수익을 보장하지 않습니다. 중요한 재무적 결정을 내리기 전에는 반드시 공인 재무 설계사 등 전문가와 상담하시기 바랍니다.</p>
+
+            <div class="copyright-section"
+                style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; text-align: center; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">creator: <strong>ⓒ Dunam</strong></span>
+                <span style="color: var(--text-muted);">|</span>
+                <span style="color: var(--text-muted);">카페: <a href="https://cafe.naver.com/retireclass" target="_blank"
+                        style="color: var(--primary); text-decoration: none; font-weight: 600;">cafe.naver.com/retireclass</a></span>
+                <span style="color: var(--text-muted);">|</span>
+                <span style="color: var(--success); font-weight: 600;">본 프로그램은 자유롭게 사용 및 배포가 가능합니다. ✅</span>
+            </div>
         </footer>
     </div>
 
