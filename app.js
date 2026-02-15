@@ -170,9 +170,9 @@ const Renderer = {
             }
         }
 
-        const progress = fireNumber > 0 ? Math.min((currentSavings / fireNumber) * 100, 100) : 0;
-        Utils.animateNumber(d.percProgress, progress, 500, (v) => v.toFixed(1) + '%');
-        d.progressBar.style.width = progress + '%';
+        const progress = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : (currentSavings >= 0 ? 100 : 0);
+        Utils.animateNumber(d.percProgress, Math.min(progress, 999.9), 500, (v) => v.toFixed(1) + '%');
+        d.progressBar.style.width = Math.min(progress, 100) + '%';
     },
 
     updateDiagnosisText(rate, lifeExpectancy, targetAge, pensionStartAge, monthlyGap, fireNumber, currentSavings, suggestion = null) {
@@ -183,18 +183,40 @@ const Renderer = {
         else if (currentRate === 0) modelName = "원금 완전 고갈 모델";
         else modelName = `원금 일부 고갈 모델 (${currentRate}% 유지)`;
 
-        const progressNum = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : 0;
+        const progressNum = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : (currentSavings >= 0 ? 100 : 0);
         const bridgePeriod = Math.max(0, pensionStartAge - targetAge);
         const bridgeText = bridgePeriod > 0
             ? `<p>은퇴 후 약 <strong>${Utils.formatAge(bridgePeriod)}년</strong> 동안은 연금 없이 생활비 전액을 자산에서 충당해야 합니다.</p>`
             : "";
 
+        let diagnosisIntro = "";
+        if (fireNumber <= 0) {
+            diagnosisIntro = `
+                <p>현재 설정하신 조건에 따르면, 은퇴 후 발생하는 수입(연금 등)이 지출보다 많거나 같아 별도의 은퇴 자금이 필요하지 않은 <strong>여유로운 상태</strong>입니다.</p>
+                <p>은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 추가로 확보해야 할 자산은 <strong>0원</strong>이며, 현재 이미 목표를 <strong>100% 달성</strong>하셨습니다.</p>
+            `;
+        } else if (currentSavings >= fireNumber) {
+            diagnosisIntro = `
+                <p>축하합니다! 현재 이미 은퇴 목표 금액인 <strong>${Utils.formatKoreanCurrency(fireNumber)}</strong>을 초과 달성하셨습니다.</p>
+                <p>현재의 자산만으로도 <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 계획하신 라이프스타일을 충분히 유지할 수 있는 <strong>매우 안정적인 상태</strong>입니다.</p>
+                <p>앞으로는 자산 규모를 더 키우기보다, 어떻게 하면 더욱 가치 있게 인출하고 사용할지에 대한 계획을 세워보셔도 좋습니다.</p>
+            `;
+        } else {
+            const gapText = monthlyGap > 0
+                ? `은퇴 후 월 부족분(<strong>${Utils.formatKoreanCurrency(monthlyGap)}</strong>)을 충당하며`
+                : `연금 개시 후 수입이 충분하더라도, 연금 개시 전까지의 생활비 등을 고려할 때`;
+
+            diagnosisIntro = `
+                <p>${gapText} <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해 
+                은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
+                <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
+            `;
+        }
+
         let html = `
             <p>선택하신 전략은 <strong>'${modelName}'</strong>입니다.</p>
             ${bridgeText}
-            <p>은퇴 후 월 부족분(${Utils.formatKoreanCurrency(monthlyGap)})을 충당하며 <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해 
-            은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
-            <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
+            ${diagnosisIntro}
         `;
 
         if (suggestion) {
