@@ -643,7 +643,7 @@ input[type="range"] {
     border-radius: 0.75rem;
     font-size: 0.85rem;
     font-weight: 800;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
     white-space: nowrap;
     z-index: 10;
     transition: left 0.1s ease-out;
@@ -679,7 +679,7 @@ input[type="range"]::-webkit-slider-thumb {
     border: 3px solid white;
     border-radius: 50%;
     box-shadow: var(--shadow-sm);
-    transition: var(--transition);
+    transition: var(--transition-fast);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
@@ -694,7 +694,7 @@ input[type="range"]::-moz-range-thumb {
     border: 3px solid white;
     border-radius: 50%;
     box-shadow: var(--shadow-sm);
-    transition: var(--transition);
+    transition: var(--transition-fast);
 }
 
 /* Future Expenses Part */
@@ -794,7 +794,7 @@ input[type="range"]::-moz-range-thumb {
 .btn-add-future:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.3);
 }
 
 /* Results Content Area */

@@ -11,7 +11,8 @@ const CONFIG = {
 
 let state = {
     futureExpenses: [],
-    retireModel: 'preservation'
+    retireModel: 'preservation',
+    lastResult: null
 };
 
 const UI = {
@@ -154,19 +155,19 @@ const Renderer = {
             const yearsToFire = fireAge - currentAge;
             d.yearsToFire.textContent = Utils.formatAge(yearsToFire) + '년';
             d.ageAtFire.textContent = `${Utils.formatAge(fireAge)}세에 목표 달성 예상`;
-            d.yearsToGo.textContent = `목표 은퇴일(${Utils.formatAge(targetAge)}세)까지 넉넉합니다`;
+            d.yearsToGo.textContent = `목표 은퇴 시점(${Utils.formatAge(targetAge)}세)보다 빠른 달성이 가능합니다`;
             d.statusMessage.textContent = '현재 계획대로면 조기 은퇴도 가능해 보입니다!';
         } else {
             if (currentSavings >= fireNumber) {
-                d.yearsToFire.textContent = '0.0년';
+                d.yearsToFire.textContent = '달성 완료';
                 d.ageAtFire.textContent = '목표 달성 완료';
                 d.yearsToGo.textContent = '이미 충분한 자산을 확보하셨습니다';
                 d.statusMessage.textContent = '축하합니다! 경제적 자유를 이루셨습니다.';
             } else {
                 d.yearsToFire.textContent = '목표 미달성';
-                d.ageAtFire.textContent = `${Utils.formatAge(targetAge)}세 시점에 부족 예상`;
+                d.ageAtFire.textContent = `${Utils.formatAge(targetAge)}세까지 목표 금액에 도달하기 어렵습니다`;
                 d.yearsToGo.textContent = '저축액을 높이거나 목표를 조정해 보세요';
-                d.statusMessage.textContent = '목표 달성을 위해 조금 더 분발이 필요합니다.';
+                d.statusMessage.textContent = '추가적인 전략 조정이 필요합니다.';
             }
         }
 
@@ -180,8 +181,8 @@ const Renderer = {
         const currentRate = rate * 100;
 
         if (currentRate === 100) modelName = "원금 보존 모델";
-        else if (currentRate === 0) modelName = "원금 완전 고갈 모델";
-        else modelName = `원금 일부 고갈 모델 (${currentRate}% 유지)`;
+        else if (currentRate === 0) modelName = "원금 소진 모델";
+        else modelName = `원금 일부 소진 모델 (${currentRate}% 유지)`;
 
         const progressNum = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : (currentSavings >= 0 ? 100 : 0);
         const bridgePeriod = Math.max(0, pensionStartAge - targetAge);
@@ -193,7 +194,7 @@ const Renderer = {
         if (fireNumber <= 0) {
             diagnosisIntro = `
                 <p>현재 설정하신 조건에 따르면, 은퇴 후 발생하는 수입(연금 등)이 지출보다 많거나 같아 별도의 은퇴 자금이 필요하지 않은 <strong>여유로운 상태</strong>입니다.</p>
-                <p>은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 추가로 확보해야 할 자산은 <strong>0원</strong>이며, 현재 이미 목표를 <strong>100% 달성</strong>하셨습니다.</p>
+                <p>별도로 확보해야 할 은퇴 자산은 없으며, 연금만으로도 생활비를 충분히 충당할 수 있습니다.</p>
             `;
         } else if (currentSavings >= fireNumber) {
             diagnosisIntro = `
@@ -203,13 +204,13 @@ const Renderer = {
             `;
         } else {
             const gapText = monthlyGap > 0
-                ? `은퇴 후 월 부족분(<strong>${Utils.formatKoreanCurrency(monthlyGap)}</strong>)을 충당하며`
+                ? `은퇴 후 매달 추가로 필요한 <strong>${Utils.formatKoreanCurrency(monthlyGap)}</strong>을 충당하며`
                 : `연금 개시 후 수입이 충분하더라도, 연금 개시 전까지의 생활비 등을 고려할 때`;
 
             diagnosisIntro = `
                 <p>${gapText} <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해 
                 은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
-                <p>현재의 저축 페이스를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
+                <p>현재의 저축·투자 속도를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
             `;
         }
 
@@ -232,7 +233,7 @@ const Renderer = {
                 const extraAnnual = suggestion.extraMonthly * 12;
                 html += `
                         <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5;">
-                            💡 <strong>방법 A: 매달 ${Utils.formatKoreanCurrency(suggestion.extraMonthly)}(연간 ${Utils.formatKoreanCurrency(extraAnnual)})</strong>를 더 저축하면 계획대로 <strong>${Utils.formatAge(targetAge)}세</strong>에 은퇴가 가능합니다.
+                            💡 <strong>방법 A: 매달 ${Utils.formatKoreanCurrency(suggestion.extraMonthly)}(연간 ${Utils.formatKoreanCurrency(extraAnnual)})</strong>을 더 저축하면 계획대로 <strong>${Utils.formatAge(targetAge)}세</strong>에 은퇴가 가능합니다.
                         </li>
                     `;
             }
@@ -245,15 +246,7 @@ const Renderer = {
                     `;
             }
 
-            if (suggestion.achievableAge) {
-                const delayYears = suggestion.achievableAge - targetAge;
-                const style = delayYears > 10 ? "color: #b91c1c; font-weight: 700;" : "";
-                html += `
-                        <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5; border-top: 1px dashed #fed7aa; padding-top: 0.75rem; margin-top: 0.5rem;">
-                            ⚠️ <strong>차선책:</strong> 은퇴 시점을 <strong>${Utils.formatAge(suggestion.achievableAge)}세</strong>로 조정하세요. <span style="${style}">(은퇴 ${Utils.formatAge(delayYears)}년 연기)</span>
-                        </li>
-                    `;
-            } else if (suggestion.neverReached && !suggestion.extraMonthly && !suggestion.extraReturn) {
+            if (suggestion.neverReached && !suggestion.extraMonthly && !suggestion.extraReturn) {
                 html += `
                     <li style="color: #7c2d12; font-size: 0.95rem; line-height: 1.5; border-top: 1px dashed #fed7aa; padding-top: 0.75rem; margin-top: 0.5rem;">
                         💡 <strong>조언:</strong> 현재 설정으로는 현실적인 대안을 계산하기 어렵습니다. 목표 금액을 낮추거나 은퇴 나이를 조정해 보세요.
@@ -380,7 +373,6 @@ const Logic = {
         const birthDateStr = u.birthDate.value;
         const retirementDateStr = u.retirementDate.value;
         const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
         const currentAge = Utils.getCurrentAge(birthDateStr) || 50;
         const targetAge = Utils.dateDiffInYears(birthDateStr, retirementDateStr) || 62;
@@ -494,15 +486,7 @@ const Logic = {
                     suggestion = { extraMonthly: shortFall * (r / (Math.pow(1 + r, n) - 1)) };
                 }
             }
-            let found = false;
-            for (let i = 0; i < balancesAdjusted.length; i++) {
-                if (balancesAdjusted[i] >= fireNumber) {
-                    if (!suggestion) suggestion = {};
-                    suggestion.achievableAge = labels[i];
-                    found = true; break;
-                }
-            }
-            if (!found) { if (!suggestion) suggestion = {}; suggestion.neverReached = true; }
+            if (!suggestion) { suggestion = { neverReached: true }; }
             if (yearsLeft > 0) {
                 const targetIdx = labels.indexOf(targetAge);
                 const currentExpectedAtTarget = targetIdx !== -1 ? balancesAdjusted[targetIdx] : 0;
@@ -512,6 +496,15 @@ const Logic = {
                 }
             }
         }
+
+        // 시뮬레이션 결과를 state에 저장 (CSV 내보내기 등에서 활용)
+        state.lastResult = {
+            currentAge, targetAge, lifeExpectancy, fireNumber, fireAge,
+            currentSavings, preservationRate, pensionStartAge,
+            monthlyGapWithPension, monthlyExpenses, monthlyPension,
+            nominalReturn, inflation, realReturn, savingsRate,
+            monthlyContribution, labels, balances, balancesAdjusted, suggestion
+        };
 
         Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, pensionStartAge, monthlyGapWithPension, fireNumber, currentSavings, suggestion);
         Renderer.updateChart(labels, balances, balancesAdjusted, fireNumber, fireAge, targetAge);
@@ -641,7 +634,7 @@ const App = {
         if (isReverse) val = 100 - val;
 
         tooltip.textContent = `${(val % 1 === 0) ? val : val.toFixed(1)}%`;
-        slider.style.background = `linear-gradient(to right, var(--primary) ${percent}%, #f1f5f9 ${percent}%)`;
+        slider.style.background = `linear-gradient(to right, var(--primary) ${percent}%, var(--bg-accent) ${percent}%)`;
         tooltip.style.left = `calc(${percent}% + (${10 - percent * 0.2}px))`;
 
         const numInput = document.getElementById(sliderId.replace('slider', 'input'));
@@ -814,31 +807,127 @@ const App = {
     },
 
     exportToCSV() {
-        const rows = [
-            ["항목", "내용"], ["--- 기본 정보 ---", ""],
-            ["생년월", UI.inputs.birthDate.value],
-            ["목표 은퇴년월", UI.inputs.retirementDate.value],
-            ["현재 총 자산", UI.inputs.currentSavings.value + " (만원)"],
-            ["연간 소득", UI.inputs.annualIncome.value + " (만원/년)"],
-            ["연간 추가 저축액", UI.inputs.annualContribution.value + " (만원/년)"],
-            ["은퇴 후 월 생활비", UI.inputs.annualExpenses.value + " (만원/월)"],
-            ["은퇴 후 월 예상 연금", UI.inputs.monthlyPension.value + " (만원/월)"],
-            ["연금 개시년월", UI.inputs.pensionStartDate.value],
-            ["--- 경제 지표 ---", ""],
-            ["기대 수익률", UI.inputs.expectedReturn.value + "%"],
-            ["물가 상승률", UI.inputs.inflationRate.value + "%"],
-            ["--- 결과 ---", ""],
-            ["은퇴 목표 금액", UI.displays.fireNumber.textContent],
-            ["은퇴 달성 시점", UI.displays.ageAtFire.textContent]
-        ];
+        const r = state.lastResult;
+        if (!r) { alert('계산 결과가 없습니다. 입력값을 확인해 주세요.'); return; }
+
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        // 전략명
+        const rate100 = r.preservationRate * 100;
+        let strategyName = rate100 === 100 ? '원금 보존 모델' : (rate100 === 0 ? '원금 소진 모델' : `원금 일부 소진 모델 (${rate100}% 유지)`);
+
+        // 진행률
+        const progress = r.fireNumber > 0 ? (r.currentSavings / r.fireNumber) * 100 : 100;
+
+        const rows = [];
+
+        // ── 헤더 ──
+        rows.push(['파이어맵 (FIRE Map) | 은퇴 설계 보고서', '']);
+        rows.push(['생성 일시', `${dateStr} ${timeStr}`]);
+        rows.push(['', '']);
+
+        // ── 1. 기본 정보 ──
+        rows.push(['═══ 1. 기본 정보 ═══', '']);
+        rows.push(['생년월', UI.inputs.birthDate.value]);
+        rows.push(['현재 나이', `${Utils.formatAge(r.currentAge)}세`]);
+        rows.push(['목표 은퇴년월', UI.inputs.retirementDate.value]);
+        rows.push(['목표 은퇴 나이', `${Utils.formatAge(r.targetAge)}세`]);
+        rows.push(['기대 수명 (자산 유지)', `${r.lifeExpectancy}세`]);
+        rows.push(['현재 총 자산', `${UI.inputs.currentSavings.value} 만원`]);
+        rows.push(['연간 총 소득 (세후)', `${UI.inputs.annualIncome.value} 만원/년`]);
+        rows.push(['연간 추가 저축액', `${UI.inputs.annualContribution.value} 만원/년`]);
+        rows.push(['은퇴 후 월 생활비 (현재가)', `${UI.inputs.annualExpenses.value} 만원/월`]);
+        rows.push(['은퇴 후 월 예상 연금 (현재가)', `${UI.inputs.monthlyPension.value} 만원/월`]);
+        rows.push(['연금 개시년월', UI.inputs.pensionStartDate.value]);
+        rows.push(['', '']);
+
+        // ── 2. 경제 지표 및 전략 ──
+        rows.push(['═══ 2. 경제 지표 및 전략 ═══', '']);
+        rows.push(['기대 수익률 (명목)', `${(r.nominalReturn * 100).toFixed(1)}%`]);
+        rows.push(['물가 상승률', `${(r.inflation * 100).toFixed(1)}%`]);
+        rows.push(['실질 수익률', `${(r.realReturn * 100).toFixed(1)}%`]);
+        rows.push(['인출 전략', strategyName]);
+        rows.push(['저축률', `${r.savingsRate.toFixed(1)}%`]);
+        rows.push(['월 저축액', Utils.formatKoreanCurrency(r.monthlyContribution)]);
+        rows.push(['', '']);
+
+        // ── 3. 미래 목돈 계획 ──
         if (state.futureExpenses.length > 0) {
-            rows.push(["--- 미래 목돈 상세 ---", ""]);
-            state.futureExpenses.forEach(e => rows.push([`${e.amount > 0 ? '[수입]' : '[지출]'} ${e.name}`, `${e.age}세 | ${Utils.formatKoreanCurrency(e.amount)}`]));
+            rows.push(['═══ 3. 미래 목돈 계획 ═══', '']);
+            rows.push(['구분', '나이 | 금액']);
+            state.futureExpenses.forEach(e => {
+                rows.push([`${e.amount > 0 ? '[수입]' : '[지출]'} ${e.name}`, `${e.age}세 | ${Utils.formatKoreanCurrency(e.amount)}`]);
+            });
+            rows.push(['', '']);
         }
-        const csv = "\ufeff" + rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
-        const link = document.createElement("a");
+
+        // ── 4. 진단 결과 ──
+        rows.push(['═══ 4. 은퇴 준비 진단 ═══', '']);
+        rows.push(['은퇴 목표 금액 (FIRE Number)', Utils.formatKoreanCurrency(Math.max(0, r.fireNumber))]);
+        rows.push(['현재 자산', Utils.formatKoreanCurrency(r.currentSavings)]);
+        rows.push(['달성률', `${Math.min(progress, 999.9).toFixed(1)}%`]);
+        rows.push(['남은 시간', UI.displays.yearsToFire.textContent]);
+        rows.push(['달성 예상', UI.displays.ageAtFire.textContent]);
+        rows.push(['상태', UI.displays.statusMessage.textContent]);
+
+        // 브릿지 기간
+        const bridgePeriod = Math.max(0, r.pensionStartAge - r.targetAge);
+        if (bridgePeriod > 0) {
+            rows.push(['연금 공백기 (브릿지)', `${Utils.formatAge(bridgePeriod)}년`]);
+        }
+        rows.push(['', '']);
+
+        // ── 5. 목표 달성 제안 ──
+        if (r.suggestion) {
+            rows.push(['═══ 5. 목표 달성을 위한 제안 ═══', '']);
+            if (r.suggestion.extraMonthly) {
+                const extraAnnual = r.suggestion.extraMonthly * 12;
+                rows.push(['방법 A: 추가 저축', `매달 ${Utils.formatKoreanCurrency(r.suggestion.extraMonthly)} (연간 ${Utils.formatKoreanCurrency(extraAnnual)}) 추가 시 ${Utils.formatAge(r.targetAge)}세 은퇴 가능`]);
+            }
+            if (r.suggestion.extraReturn && r.suggestion.extraReturn < 20) {
+                rows.push(['방법 B: 수익률 조정', `연평균 수익률을 ${r.suggestion.extraReturn.toFixed(1)}%p 더 높이면 목표 달성 가능`]);
+            }
+
+            if (r.suggestion.neverReached && !r.suggestion.extraMonthly && !r.suggestion.extraReturn) {
+                rows.push(['조언', '현재 설정으로는 현실적인 대안을 계산하기 어렵습니다. 목표 금액을 낮추거나 은퇴 나이를 조정해 보세요.']);
+            }
+            rows.push(['', '']);
+        }
+
+        // ── 6. 연간 시뮬레이션 테이블 ──
+        rows.push(['═══ 6. 연간 자산 시뮬레이션 ═══', '', '', '']);
+        rows.push(['나이', '예상 자산 (명목)', '실질 가치 (구매력)', '은퇴 목표선']);
+        const targetLine = Math.max(0, r.fireNumber);
+        for (let i = 0; i < r.labels.length; i++) {
+            rows.push([
+                `${Utils.formatAge(r.labels[i])}세`,
+                Utils.formatKoreanCurrency(r.balances[i]),
+                Utils.formatKoreanCurrency(r.balancesAdjusted[i]),
+                Utils.formatKoreanCurrency(targetLine)
+            ]);
+        }
+        rows.push(['', '']);
+
+        // ── 푸터 ──
+        rows.push(['═══ 면책 사항 ═══', '']);
+        rows.push(['', '본 보고서는 교육 및 참고용이며 금융/투자/세무/법률적 자문이 아닙니다.']);
+        rows.push(['', '실제 결과는 다를 수 있으며 중요한 재무 결정 전에는 전문가와 상담하시기 바랍니다.']);
+        rows.push(['', '']);
+        rows.push(['생성 도구', '파이어맵 (FIRE Map) | https://happyretire.github.io/FIRE-Map/']);
+        rows.push(['creator', 'ⓒ Dunam | cafe.naver.com/retireclass']);
+
+        // CSV 생성 및 다운로드
+        const maxCols = Math.max(...rows.map(r => r.length));
+        const csv = "\ufeff" + rows.map(row => {
+            while (row.length < maxCols) row.push('');
+            return row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',');
+        }).join('\n');
+
+        const link = document.createElement('a');
         link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        link.download = `FIRE_계획서_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.download = `FIRE_은퇴계획서_${dateStr}.csv`;
         link.click();
     }
 };
