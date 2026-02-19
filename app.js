@@ -193,7 +193,7 @@ const Renderer = {
         d.progressBar.style.width = Math.min(progress, 100) + '%';
     },
 
-    updateDiagnosisText(rate, lifeExpectancy, targetAge, pensionStartAge, monthlyGap, fireNumber, currentSavings, suggestion = null) {
+    updateDiagnosisText(rate, lifeExpectancy, targetAge, currentAge, pensionStartAge, monthlyGap, fireNumber, currentSavings, suggestion = null) {
         let modelName = "";
         const currentRate = rate * 100;
 
@@ -208,6 +208,9 @@ const Renderer = {
             : "";
 
         let diagnosisIntro = "";
+        const isAlreadyRetired = targetAge <= currentAge;
+        const baseRefAge = isAlreadyRetired ? currentAge : targetAge;
+
         if (fireNumber <= 0) {
             diagnosisIntro = `
                 <p>현재 설정하신 조건에 따르면, 은퇴 후 발생하는 수입(연금 등)이 지출보다 많거나 같아 별도의 은퇴 자금이 필요하지 않은 <strong>여유로운 상태</strong>입니다.</p>
@@ -215,9 +218,9 @@ const Renderer = {
             `;
         } else if (currentSavings >= fireNumber) {
             diagnosisIntro = `
-                <p>축하합니다! 현재 이미 은퇴 목표 금액인 <strong>${Utils.formatKoreanCurrency(fireNumber)}</strong>을 초과 달성하셨습니다.</p>
-                <p>현재의 자산만으로도 <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 계획하신 라이프스타일을 충분히 유지할 수 있는 <strong>매우 안정적인 상태</strong>입니다.</p>
-                <p>앞으로는 자산 규모를 더 키우기보다, 어떻게 하면 더욱 가치 있게 인출하고 사용할지에 대한 계획을 세워보셔도 좋습니다.</p>
+                <p>축하합니다! 현재 이미 ${isAlreadyRetired ? '현재 나이 기준 ' : ''}은퇴 목표 금액인 <strong>${Utils.formatKoreanCurrency(fireNumber)}</strong>을 초과 달성하셨습니다.</p>
+                <p>현재의 자산만으로도 <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 계획하신 라이프스타일을 충분히 유지하며 <strong>'${modelName}'</strong> 전략을 수행할 수 있는 <strong>매우 안정적인 상태</strong>입니다.</p>
+                <p>만약 목표 금액이 생각보다 높게 느껴지신다면, 그것은 현재 <strong>원금을 거의 보존하거나 일부만 사용하는 안정적인 전략</strong>을 선택하셨기 때문입니다. 원금을 완전히 소진하는 모델로 변경하시면 필요 자산 규모는 더 작아질 수 있습니다.</p>
             `;
         } else {
             const gapText = monthlyGap > 0
@@ -226,7 +229,7 @@ const Renderer = {
 
             diagnosisIntro = `
                 <p>${gapText} <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해 
-                은퇴 시점(<strong>${Utils.formatAge(targetAge)}세</strong>)에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
+                ${isAlreadyRetired ? '현재 시점' : '은퇴 시점(' + Utils.formatAge(targetAge) + '세)'}에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
                 <p>현재의 저축·투자 속도를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
             `;
         }
@@ -284,22 +287,37 @@ const Renderer = {
     updateChart(labels, balances, balancesAdjusted, target, fireAge, targetAge) {
         const ctx = document.getElementById('fireChart').getContext('2d');
 
+        const firstLabel = labels.length > 0 ? labels[0] : 0;
+        const lastLabel = labels.length > 0 ? labels[labels.length - 1] : 100;
+
         const annotations = {
-            workingPhase: {
-                type: 'box', xMin: labels[0], xMax: targetAge, backgroundColor: 'rgba(34, 197, 94, 0.03)', borderWidth: 0,
-                label: { display: true, content: '저축 및 자산 형성기', position: 'start', font: { size: 11, weight: 'bold', family: 'Noto Sans KR' }, color: 'rgba(34, 197, 94, 0.5)', yAdjust: 10 }
-            },
-            retirementPhase: {
-                type: 'box', xMin: targetAge, xMax: labels[labels.length - 1], backgroundColor: 'rgba(249, 115, 22, 0.03)', borderWidth: 0,
-                label: { display: true, content: '은퇴 및 자산 인출기', position: 'end', font: { size: 11, weight: 'bold', family: 'Noto Sans KR' }, color: 'rgba(249, 115, 22, 0.5)', yAdjust: 10 }
-            },
             retirementLine: {
                 type: 'line', xMin: targetAge, xMax: targetAge, borderColor: 'rgba(100, 116, 139, 0.3)', borderWidth: 1,
-                label: { display: true, content: `${Utils.formatAge(targetAge)}세 은퇴`, position: 'end', backgroundColor: 'rgba(100, 116, 139, 0.8)', font: { size: 10 } }
+                label: {
+                    display: targetAge >= firstLabel,
+                    content: `${Utils.formatAge(targetAge)}세 은퇴`, position: 'end', backgroundColor: 'rgba(100, 116, 139, 0.8)', font: { size: 10 }
+                }
             }
         };
 
-        if (fireAge !== null) {
+        // 자산 형성기 영역 (은퇴 전인 경우에만 표시)
+        if (targetAge > firstLabel) {
+            annotations.workingPhase = {
+                type: 'box', xMin: firstLabel, xMax: targetAge, backgroundColor: 'rgba(34, 197, 94, 0.03)', borderWidth: 0,
+                label: { display: true, content: '저축 및 자산 형성기', position: 'start', font: { size: 11, weight: 'bold', family: 'Noto Sans KR' }, color: 'rgba(34, 197, 94, 0.5)', yAdjust: 10 }
+            };
+        }
+
+        // 은퇴 및 자산 인출기 영역 (전체 기간 중 은퇴 이후 부분)
+        const retirePhaseStart = Math.max(firstLabel, targetAge);
+        if (retirePhaseStart < lastLabel) {
+            annotations.retirementPhase = {
+                type: 'box', xMin: retirePhaseStart, xMax: lastLabel, backgroundColor: 'rgba(249, 115, 22, 0.03)', borderWidth: 0,
+                label: { display: true, content: '은퇴 및 자산 인출기', position: 'end', font: { size: 11, weight: 'bold', family: 'Noto Sans KR' }, color: 'rgba(249, 115, 22, 0.5)', yAdjust: 10 }
+            };
+        }
+
+        if (fireAge !== null && labels.indexOf(fireAge) !== -1) {
             annotations.fireMarker = {
                 type: 'point', xValue: fireAge, yValue: balancesAdjusted[labels.indexOf(fireAge)],
                 backgroundColor: '#ef4444', radius: 6, borderColor: '#fff', borderWidth: 2,
@@ -313,7 +331,7 @@ const Renderer = {
             UI.chart.data.datasets[1].data = balances;
             UI.chart.data.datasets[2].data = labels.map(() => target);
             UI.chart.options.plugins.annotation.annotations = annotations;
-            UI.chart.update('none'); // 정적 업데이트 (깜빡임 방지)
+            UI.chart.update('none');
             return;
         }
 
@@ -405,38 +423,36 @@ const Logic = {
         const inflation = (parseFloat(u.inflationRate.value) || 0) / 100;
         const realReturn = nominalReturn - inflation;
         const preservationRate = (100 - (parseInt(UI.sliders.depletionRate.value) || 0)) / 100;
-
         // 연금 개시 시점 계산 및 폴백 로직
         const startVal = u.pensionStartDate.value;
         let pensionStartAge = Utils.dateDiffInYears(birthDateStr, startVal);
+        if (pensionStartAge === null) pensionStartAge = targetAge;
 
-        // 날짜 형식이 잘못되었거나 비어있다면 은퇴 나이를 기본값으로 사용
-        if (pensionStartAge === null) {
-            pensionStartAge = targetAge;
-        }
+        // 기준 나이 설정 (이미 은퇴한 경우 현재 나이 기준, 아니면 은퇴 목표 나이 기준)
+        const baseCalcAge = Math.max(currentAge, targetAge);
 
-        // 은퇴 기간 시뮬레이션 및 필요 자산(fireNumber) 역산
-        // 1단계: 연금 개시 전 (생활비 전액 필요)
-        // 2단계: 연금 개시 후 (생활비 - 연금 필요)
+        // 연금 개시까지 남은 기간 (기준 나이 기준)
+        const yearsToPensionFromBase = Math.max(0, pensionStartAge - baseCalcAge);
+        const actualPensionStartForBase = Math.max(baseCalcAge, pensionStartAge);
+        const yearsAfterPensionFromBase = Math.max(0, lifeExpectancy - actualPensionStartForBase);
 
+        // 연금 개시 시점의 목표액
         const monthlyGapWithPension = Math.max(0, monthlyExpenses - monthlyPension);
         const monthlyGapNoPension = monthlyExpenses;
 
-        const yearsToPension = Math.max(0, pensionStartAge - targetAge);
-        const actualPensionStart = Math.max(targetAge, pensionStartAge);
-        const yearsAfterPension = Math.max(0, lifeExpectancy - actualPensionStart);
-
-        // 연금 개시 후 시점의 목표액 (Pv_at_pension_start)
         const preservationTarget = realReturn > 0 ? (monthlyGapWithPension * 12) / realReturn : (monthlyGapWithPension * 12) * 25;
         const finalBalanceAtEnd = preservationTarget * preservationRate;
 
-        const targetAtPensionStart = Utils.calculatePV(realReturn, yearsAfterPension, monthlyGapWithPension * 12, finalBalanceAtEnd);
+        const targetAtPensionStart = Utils.calculatePV(realReturn, yearsAfterPensionFromBase, monthlyGapWithPension * 12, finalBalanceAtEnd);
 
-        // 은퇴 시점의 목표액 (fireNumber)
-        let fireNumber = Utils.calculatePV(realReturn, yearsToPension, monthlyGapNoPension * 12, targetAtPensionStart);
+        // 기준 나이 시점의 필요 자산 (fireNumber)
+        let fireNumber = Utils.calculatePV(realReturn, yearsToPensionFromBase, monthlyGapNoPension * 12, targetAtPensionStart);
 
         state.futureExpenses.forEach(exp => {
-            fireNumber -= exp.amount * Math.pow(1 + realReturn, targetAge - exp.age);
+            // 기준 나이 이후의 목돈 지출만 반영
+            if (exp.age > baseCalcAge) {
+                fireNumber -= exp.amount * Math.pow(1 + realReturn, baseCalcAge - exp.age);
+            }
         });
 
         UI.displays.fireNumber.textContent = Utils.formatKoreanCurrency(Math.max(0, fireNumber));
@@ -517,7 +533,7 @@ const Logic = {
             monthlyContribution, labels, balances, balancesAdjusted, suggestion
         };
 
-        Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, pensionStartAge, monthlyGapWithPension, fireNumber, currentSavings, suggestion);
+        Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, currentAge, pensionStartAge, monthlyGapWithPension, fireNumber, currentSavings, suggestion);
         Renderer.updateChart(labels, balances, balancesAdjusted, fireNumber, fireAge, targetAge);
     }
 };
