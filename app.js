@@ -6,7 +6,7 @@
 // --- 1. State & Configuration ---
 const CONFIG = {
     storageKey: 'fire_calc_state_korean_v5',
-    debounceTime: 1000
+    debounceTime: 150
 };
 
 let state = {
@@ -74,17 +74,18 @@ const Utils = {
 
     formatKoreanCurrency(value) {
         const absValue = Math.abs(value);
+        const sign = value < 0 ? '-' : '';
         if (absValue === 0) return '0원';
 
         if (absValue >= 100000000) {
             const eok = Math.floor(absValue / 100000000);
             const man = Math.floor((absValue % 100000000) / 10000);
-            return man > 0 ? `${eok.toLocaleString()}억 ${man.toLocaleString()}만원` : `${eok.toLocaleString()}억원`;
+            return sign + (man > 0 ? `${eok.toLocaleString()}억 ${man.toLocaleString()}만원` : `${eok.toLocaleString()}억원`);
         } else if (absValue >= 10000) {
             const man = Math.floor(absValue / 10000);
-            return `${man.toLocaleString()}만원`;
+            return sign + `${man.toLocaleString()}만원`;
         }
-        return `${Math.floor(absValue).toLocaleString()}원`;
+        return sign + `${Math.floor(absValue).toLocaleString()}원`;
     },
 
     formatCompact(value) {
@@ -93,12 +94,15 @@ const Utils = {
         return value.toLocaleString();
     },
 
-    calculatePV(rate, nper, pmt, fv = 0) {
-        if (nper <= 0) return fv;
-        if (Math.abs(rate) < 0.0001) return pmt * nper + fv;
-        const pvFactor = (1 - Math.pow(1 + rate, -nper)) / rate;
-        const fvFactor = 1 / Math.pow(1 + rate, nper);
-        return (pmt * pvFactor) + (fv * fvFactor);
+    calculatePV(realRate, years, monthlyPmt, fv = 0) {
+        const n = Math.max(0, years * 12);
+        const r = realRate / 12;
+        if (n <= 0) return fv;
+        if (Math.abs(r) < 0.000001) return (monthlyPmt * n) + fv;
+
+        const pvFactor = (1 - Math.pow(1 + r, -n)) / r;
+        const fvFactor = Math.pow(1 + r, -n);
+        return (monthlyPmt * pvFactor) + (fv * fvFactor);
     },
 
     parseYearMonthToAge(val, currentAge) {
@@ -116,11 +120,12 @@ const Utils = {
         if (!birthDateStr || !targetDateStr || !/^\d{4}-\d{2}$/.test(birthDateStr) || !/^\d{4}-\d{2}$/.test(targetDateStr)) return null;
         const [y1, m1] = birthDateStr.split('-').map(Number);
         const [y2, m2] = targetDateStr.split('-').map(Number);
-        return (y2 - y1) + (m2 - m1) / 12;
+        const totalMonths = (y2 - y1) * 12 + (m2 - m1);
+        return Math.max(0, totalMonths / 12); // 음수 나이 방지 핵심 로직
     },
 
     getCurrentAge(birthDateStr) {
-        if (!birthDateStr || !/^\d{4}-\d{2}$/.test(birthDateStr)) return 0;
+        if (!birthDateStr || !/^\d{4}-\d{2}$/.test(birthDateStr)) return null;
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         return this.dateDiffInYears(birthDateStr, todayStr);
@@ -188,12 +193,16 @@ const Renderer = {
             }
         }
 
-        const progress = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : (currentSavings >= 0 ? 100 : 0);
+        const progress = fireNumber > 0 ? (currentSavings / fireNumber) * 100 : (currentSavings > 0 ? 100 : 0);
         Utils.animateNumber(d.percProgress, Math.min(progress, 999.9), 500, (v) => v.toFixed(1) + '%');
         d.progressBar.style.width = Math.min(progress, 100) + '%';
+
+        // 프로그레스 바 색상 동적 변경
+        if (progress >= 100) d.progressBar.style.background = 'var(--success)';
+        else d.progressBar.style.background = 'var(--primary-gradient)';
     },
 
-    updateDiagnosisText(rate, lifeExpectancy, targetAge, currentAge, pensionStartAge, monthlyGap, fireNumber, currentSavings, suggestion = null) {
+    updateDiagnosisText(rate, lifeExpectancy, targetAge, currentAge, pensionStartAge, monthlyGap, fireNumber, currentSavings, monthlyExpenses, monthlyPension, suggestion = null) {
         let modelName = "";
         const currentRate = rate * 100;
 
@@ -209,26 +218,28 @@ const Renderer = {
 
         let diagnosisIntro = "";
         const isAlreadyRetired = targetAge <= currentAge;
-        const baseRefAge = isAlreadyRetired ? currentAge : targetAge;
 
         if (fireNumber <= 0) {
             diagnosisIntro = `
                 <p>현재 설정하신 조건에 따르면, 은퇴 후 발생하는 수입(연금 등)이 지출보다 많거나 같아 별도의 은퇴 자금이 필요하지 않은 <strong>여유로운 상태</strong>입니다.</p>
-                <p>별도로 확보해야 할 은퇴 자산은 없으며, 연금만으로도 생활비를 충분히 충당할 수 있습니다.</p>
+                <p>별도로 확보해야 할 은퇴 자산은 없습니다.</p>
             `;
         } else if (currentSavings >= fireNumber) {
             diagnosisIntro = `
                 <p>축하합니다! 현재 이미 ${isAlreadyRetired ? '현재 나이 기준 ' : ''}은퇴 목표 금액인 <strong>${Utils.formatKoreanCurrency(fireNumber)}</strong>을 초과 달성하셨습니다.</p>
                 <p>현재의 자산만으로도 <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 계획하신 라이프스타일을 충분히 유지하며 <strong>'${modelName}'</strong> 전략을 수행할 수 있는 <strong>매우 안정적인 상태</strong>입니다.</p>
-                <p>만약 목표 금액이 생각보다 높게 느껴지신다면, 그것은 현재 <strong>원금을 거의 보존하거나 일부만 사용하는 안정적인 전략</strong>을 선택하셨기 때문입니다. 원금을 완전히 소진하는 모델로 변경하시면 필요 자산 규모는 더 작아질 수 있습니다.</p>
             `;
         } else {
-            const gapText = monthlyGap > 0
+            const gapSumText = monthlyGap > 0
                 ? `은퇴 후 매달 추가로 필요한 <strong>${Utils.formatKoreanCurrency(monthlyGap)}</strong>을 충당하며`
                 : `연금 개시 후 수입이 충분하더라도, 연금 개시 전까지의 생활비 등을 고려할 때`;
 
+            const maintenanceText = currentRate === 0
+                ? `<strong>${Utils.formatAge(lifeExpectancy)}세</strong>에 자산이 소진되도록 설계했을 때`
+                : `<strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해`;
+
             diagnosisIntro = `
-                <p>${gapText} <strong>${Utils.formatAge(lifeExpectancy)}세</strong>까지 자산 가치를 유지하기 위해 
+                <p>${gapSumText} ${maintenanceText} 
                 ${isAlreadyRetired ? '현재 시점' : '은퇴 시점(' + Utils.formatAge(targetAge) + '세)'}에 총 <strong>${Utils.formatKoreanCurrency(Math.max(0, fireNumber))}</strong>이 필요합니다.</p>
                 <p>현재의 저축·투자 속도를 유지할 경우, 목표 자산의 <strong>${progressNum.toFixed(1)}%</strong>를 이미 확보하신 상태입니다.</p>
             `;
@@ -359,12 +370,30 @@ const Renderer = {
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { family: 'Noto Sans KR', size: 12 }, usePointStyle: true, padding: 20 } },
                     tooltip: {
-                        padding: 12, backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#475569',
-                        borderColor: '#e2e8f0', borderWidth: 1, titleFont: { weight: 'bold', size: 14, family: 'Noto Sans KR' },
+                        padding: 12,
+                        backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                        titleColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#f1f5f9' : '#1e293b',
+                        bodyColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#cbd5e1' : '#475569',
+                        footerColor: '#0284c7', // 강조를 위해 파란색 계열 사용
+                        borderColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#334155' : '#e2e8f0',
+                        borderWidth: 1,
+                        titleFont: { weight: 'bold', size: 14, family: 'Noto Sans KR' },
                         bodyFont: { family: 'Noto Sans KR' },
+                        footerFont: { weight: 'bold', size: 12, family: 'Noto Sans KR' }, // 푸터 글씨 강조
                         callbacks: {
                             title: (items) => `${parseFloat(items[0].label).toFixed(1)}세`,
-                            label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatKoreanCurrency(ctx.raw)}`
+                            label: (ctx) => ` ${ctx.dataset.label}: ${Utils.formatKoreanCurrency(ctx.raw)}`,
+                            footer: (items) => {
+                                const age = parseFloat(items[0].label);
+                                const res = state.lastResult;
+                                if (!res || age < res.pensionStartAge) return '';
+
+                                // 물가가 반영된 명목 연금 수령액 계산
+                                const yearsPassed = age - res.currentAge;
+                                const nominalPension = res.monthlyPension * Math.pow(1 + res.inflation, yearsPassed);
+
+                                return `\n[수입] 월 예상 연금: ${Utils.formatKoreanCurrency(nominalPension)}\n(물가상승 반영 실지급액)`;
+                            }
                         }
                     },
                     annotation: { annotations: annotations }
@@ -407,11 +436,11 @@ const Logic = {
         const u = UI.inputs;
         const birthDateStr = u.birthDate.value;
         const retirementDateStr = u.retirementDate.value;
-        const now = new Date();
 
         const currentAge = Utils.getCurrentAge(birthDateStr) || 50;
-        const targetAge = Utils.dateDiffInYears(birthDateStr, retirementDateStr) || 62;
-        const lifeExpectancy = Math.max(targetAge, parseInt(u.lifeExpectancy.value) || 95);
+        const targetAge = Utils.dateDiffInYears(birthDateStr, retirementDateStr) || (currentAge + 12);
+        // 기대수명은 최소한 은퇴나이보다는 크게 설정 (계산 오류 방지)
+        const lifeExpectancy = Math.max(targetAge + 1, parseInt(u.lifeExpectancy.value) || 95);
         const currentSavings = Utils.parseNum(u.currentSavings.value) * 10000;
 
         const monthlyIncome = (Utils.parseNum(u.annualIncome.value) * 10000) / 12;
@@ -425,6 +454,7 @@ const Logic = {
         const preservationRate = (100 - (parseInt(UI.sliders.depletionRate.value) || 0)) / 100;
         // 연금 개시 시점 계산 및 폴백 로직
         const startVal = u.pensionStartDate.value;
+        const isAlreadyRetired = targetAge <= currentAge;
         let pensionStartAge = Utils.dateDiffInYears(birthDateStr, startVal);
         if (pensionStartAge === null) pensionStartAge = targetAge;
 
@@ -436,17 +466,19 @@ const Logic = {
         const actualPensionStartForBase = Math.max(baseCalcAge, pensionStartAge);
         const yearsAfterPensionFromBase = Math.max(0, lifeExpectancy - actualPensionStartForBase);
 
-        // 연금 개시 시점의 목표액
-        const monthlyGapWithPension = Math.max(0, monthlyExpenses - monthlyPension);
+        // 연금 개시 시점의 목표액 (음수일 경우 연금이 생활비보다 많은 상태)
+        const monthlyGapWithPension = monthlyExpenses - monthlyPension;
         const monthlyGapNoPension = monthlyExpenses;
 
-        const preservationTarget = realReturn > 0 ? (monthlyGapWithPension * 12) / realReturn : (monthlyGapWithPension * 12) * 25;
+        // 연금이 생활비 이상이면 보존 목표는 필요 없음 (0 처리)
+        const preservationTarget = monthlyGapWithPension <= 0 ? 0
+            : (realReturn > 0 ? (monthlyGapWithPension * 12) / realReturn : (monthlyGapWithPension * 12) * 25);
         const finalBalanceAtEnd = preservationTarget * preservationRate;
 
-        const targetAtPensionStart = Utils.calculatePV(realReturn, yearsAfterPensionFromBase, monthlyGapWithPension * 12, finalBalanceAtEnd);
+        const targetAtPensionStart = Utils.calculatePV(realReturn, yearsAfterPensionFromBase, monthlyGapWithPension, finalBalanceAtEnd);
 
         // 기준 나이 시점의 필요 자산 (fireNumber)
-        let fireNumber = Utils.calculatePV(realReturn, yearsToPensionFromBase, monthlyGapNoPension * 12, targetAtPensionStart);
+        let fireNumber = Utils.calculatePV(realReturn, yearsToPensionFromBase, monthlyGapNoPension, targetAtPensionStart);
 
         state.futureExpenses.forEach(exp => {
             // 기준 나이 이후의 목돈 지출만 반영
@@ -466,18 +498,25 @@ const Logic = {
         const labels = [], balances = [], balancesAdjusted = [];
         let balance = currentSavings, balanceAdjusted = currentSavings, fireAge = null;
         const maxSimAge = Math.max(100, lifeExpectancy);
+        const simStartAge = Math.ceil(currentAge);
 
-        for (let age = currentAge; age <= maxSimAge; age++) {
+        for (let age = simStartAge; age <= maxSimAge; age++) {
             labels.push(age);
             balances.push(Math.round(balance));
             balancesAdjusted.push(Math.round(balanceAdjusted));
 
-            if (fireAge === null && balanceAdjusted >= fireNumber && age <= targetAge) fireAge = age;
+            if (fireAge === null && balanceAdjusted >= fireNumber) {
+                if (age <= targetAge || isAlreadyRetired) {
+                    fireAge = age;
+                }
+            }
 
             // 미래 목돈 반영 (해당 나이 연초에 반영)
             state.futureExpenses.forEach(exp => {
                 if (exp.age === age) {
-                    balance += exp.amount;
+                    // 명목 자산에는 물가 상승률만큼 부풀려서 반영 (미래 가치)
+                    balance += exp.amount * Math.pow(1 + inflation, age - currentAge);
+                    // 실질 자산에는 현재 가치 그대로 반영
                     balanceAdjusted += exp.amount;
                 }
             });
@@ -485,7 +524,7 @@ const Logic = {
             // 월 단위 정밀 시뮬레이션 (12개월 루프)
             for (let m = 0; m < 12; m++) {
                 const currentMonthAge = age + (m / 12);
-                if (age < targetAge) {
+                if (currentMonthAge < targetAge) {
                     // 자산 형성기: 월 복리 수익 + 월 저축액
                     balance = balance * (1 + nominalReturn / 12) + monthlyContribution;
                     balanceAdjusted = balanceAdjusted * (1 + realReturn / 12) + monthlyContribution;
@@ -494,7 +533,7 @@ const Logic = {
                     const isPensionStarted = currentMonthAge >= pensionStartAge;
                     const monthlyGap = isPensionStarted ? monthlyGapWithPension : monthlyGapNoPension;
 
-                    balance = balance * (1 + nominalReturn / 12) - monthlyGap * Math.pow(1 + inflation / 12, (age - currentAge) * 12 + m);
+                    balance = balance * (1 + nominalReturn / 12) - monthlyGap * Math.pow(1 + inflation / 12, (age - simStartAge) * 12 + m);
                     // 실질 가치 계산 시에는 물가상승률을 제외한 realReturn 사용
                     balanceAdjusted = balanceAdjusted * (1 + realReturn / 12) - monthlyGap;
                 }
@@ -514,13 +553,22 @@ const Logic = {
             const targetIdx = labels.indexOf(targetAge);
             const currentExpectedAtTarget = targetIdx !== -1 ? balancesAdjusted[targetIdx] : 0;
             const shortFall = Math.max(0, fireNumber - currentExpectedAtTarget);
+
+            suggestion = {};
+
+            // 방법 A: 추가 저축 제안
             if (shortFall > 0 && r > 0) {
-                suggestion = { extraMonthly: shortFall * (r / (Math.pow(1 + r, n) - 1)) };
+                suggestion.extraMonthly = shortFall * (r / (Math.pow(1 + r, n) - 1));
             }
-            if (!suggestion) { suggestion = { neverReached: true }; }
+
+            // 방법 B: 수익률 제안 (A와 독립적으로 계산)
             if (currentExpectedAtTarget > 0 && currentExpectedAtTarget < fireNumber) {
-                if (!suggestion) suggestion = {};
                 suggestion.extraReturn = (Math.pow(fireNumber / currentExpectedAtTarget, 1 / yearsLeft) - 1) * 100;
+            }
+
+            // A도 B도 불가하면 일반 조언
+            if (!suggestion.extraMonthly && !suggestion.extraReturn) {
+                suggestion.neverReached = true;
             }
         }
 
@@ -533,7 +581,7 @@ const Logic = {
             monthlyContribution, labels, balances, balancesAdjusted, suggestion
         };
 
-        Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, currentAge, pensionStartAge, monthlyGapWithPension, fireNumber, currentSavings, suggestion);
+        Renderer.updateDiagnosisText(preservationRate, lifeExpectancy, targetAge, currentAge, pensionStartAge, monthlyGapWithPension, fireNumber, currentSavings, monthlyExpenses, monthlyPension, suggestion);
         Renderer.updateChart(labels, balances, balancesAdjusted, fireNumber, fireAge, targetAge);
     }
 };
@@ -576,15 +624,22 @@ const App = {
             const numInput = document.getElementById(cfg.id.replace('slider', 'input'));
 
             if (slider) slider.addEventListener('input', () => {
-                this.updateSliderTooltip(cfg.id, cfg.tooltip, cfg.isReverse);
-                if (cfg.id === 'sliderDepletionRate') this.syncRadiosFromSlider(slider.value);
-                trigger();
+                if (cfg.id === 'sliderDepletionRate') {
+                    this.syncWithdrawalStrategy('slider', slider.value);
+                } else {
+                    this.updateSliderTooltip(cfg.id, cfg.tooltip, cfg.isReverse);
+                    trigger();
+                }
             });
             if (numInput) numInput.addEventListener('input', () => {
-                let val = Math.max(parseFloat(numInput.min), Math.min(parseFloat(numInput.max), parseFloat(numInput.value) || 0));
-                slider.value = cfg.isReverse ? 100 - val : val;
-                this.updateSliderTooltip(cfg.id, cfg.tooltip, cfg.isReverse);
-                trigger();
+                if (cfg.id === 'sliderDepletionRate') {
+                    this.syncWithdrawalStrategy('input', numInput.value);
+                } else {
+                    let val = Math.max(parseFloat(numInput.min), Math.min(parseFloat(numInput.max), parseFloat(numInput.value) || 0));
+                    slider.value = cfg.isReverse ? 100 - val : val;
+                    this.updateSliderTooltip(cfg.id, cfg.tooltip, cfg.isReverse);
+                    trigger();
+                }
             });
         });
 
@@ -649,7 +704,7 @@ const App = {
     triggerUpdate: Utils.debounce(() => {
         Logic.calculateFIRE();
         App.saveState();
-    }, 100),
+    }, CONFIG.debounceTime),
 
     updateSliderTooltip(sliderId, tooltipId, isReverse = false) {
         const slider = document.getElementById(sliderId);
@@ -680,20 +735,43 @@ const App = {
     },
 
     handleStrategyChange(e) {
-        const selected = document.querySelector('input[name="retireModel"]:checked').value;
+        const selected = e.target.value;
         const presets = { 'preservation': 100, 'depletion': 0, 'partial': 50 };
         if (presets[selected] !== undefined) {
-            UI.sliders.depletionRate.value = 100 - presets[selected];
-            this.updateSliderTooltip('sliderDepletionRate', 'tooltipDepletionRate', true);
+            this.syncWithdrawalStrategy('radio', presets[selected]);
         }
-        this.triggerUpdate();
     },
 
-    syncRadiosFromSlider(value) {
-        const logical = 100 - parseInt(value);
-        let model = logical === 100 ? 'preservation' : (logical === 0 ? 'depletion' : 'partial');
-        const radio = document.querySelector(`input[name="retireModel"][value="${model}"]`);
-        if (radio) radio.checked = true;
+    syncWithdrawalStrategy(source, value) {
+        const slider = UI.sliders.depletionRate;
+        const numInput = document.getElementById('inputDepletionRate');
+        const radios = document.querySelectorAll('input[name="retireModel"]');
+
+        let logicalValue = parseInt(value); // 100(보존) ~ 0(소진)
+
+        // 1. 소스에 따른 값 업데이트
+        if (source === 'slider') {
+            logicalValue = 100 - parseInt(slider.value);
+        } else if (source === 'input') {
+            logicalValue = isNaN(logicalValue) ? 100 : Math.max(0, Math.min(100, logicalValue));
+        }
+
+        // 2. 다른 UI 요소들로 전파
+        if (source !== 'slider') slider.value = 100 - logicalValue;
+        if (source !== 'input') numInput.value = logicalValue;
+
+        // 3. 라디오 버튼 상태 업데이트
+        let model = 'partial';
+        if (logicalValue === 100) model = 'preservation';
+        else if (logicalValue === 0) model = 'depletion';
+
+        radios.forEach(r => {
+            if (r.value === model) r.checked = true;
+        });
+
+        // 4. 시각적 업데이트 (툴팁, 차트)
+        this.updateSliderTooltip('sliderDepletionRate', 'tooltipDepletionRate', true);
+        this.triggerUpdate();
     },
 
     applyPreset(card) {
@@ -732,6 +810,7 @@ const App = {
             state.futureExpenses.push({ name, amount: type === 'income' ? amt : -amt, age });
             this.updateExpensesUI();
             this.triggerUpdate();
+            this.saveState();
             nameIn.value = ''; amtIn.value = '';
         }
     },
@@ -763,7 +842,12 @@ const App = {
 
     saveState() {
         try {
-            const data = { inputs: {}, futureExpenses: state.futureExpenses, retireModel: document.querySelector('input[name="retireModel"]:checked')?.value || 'preservation' };
+            const data = {
+                inputs: {},
+                futureExpenses: state.futureExpenses,
+                retireModel: document.querySelector('input[name="retireModel"]:checked')?.value || 'preservation',
+                preservationRateValue: document.getElementById('inputDepletionRate')?.value || "100"
+            };
             Object.keys(UI.inputs).forEach(k => data.inputs[k] = UI.inputs[k].value);
             localStorage.setItem(CONFIG.storageKey, JSON.stringify(data));
         } catch (e) {
@@ -775,10 +859,15 @@ const App = {
         try {
             const saved = JSON.parse(localStorage.getItem(CONFIG.storageKey) || '{}');
             if (saved.inputs) Object.keys(UI.inputs).forEach(k => { if (saved.inputs[k]) UI.inputs[k].value = saved.inputs[k]; });
-            if (saved.retireModel) {
-                const r = document.querySelector(`input[name="retireModel"][value="${saved.retireModel}"]`);
-                if (r) r.checked = true;
+
+            // 저장된 은퇴 전략 불러오기 및 동기화
+            if (saved.preservationRateValue !== undefined) {
+                this.syncWithdrawalStrategy('input', saved.preservationRateValue);
+            } else if (saved.retireModel) {
+                const presets = { 'preservation': 100, 'depletion': 0, 'partial': 50 };
+                this.syncWithdrawalStrategy('radio', presets[saved.retireModel] || 100);
             }
+
             if (saved.futureExpenses) { state.futureExpenses = saved.futureExpenses; this.updateExpensesUI(); }
         } catch (e) {
             console.error('Failed to load state from localStorage:', e);
@@ -798,7 +887,11 @@ const App = {
         document.documentElement.setAttribute('data-theme', next);
         localStorage.setItem('fire_map_theme', next);
 
-        // 차트도 테마에 맞게 다시 그려야 효과적일 수 있음 (그리드 색상 등)
+        // 차트를 완전히 파괴 후 재생성하여 테마 색상(그리드, 툴팁 등)을 올바르게 반영
+        if (UI.chart) {
+            UI.chart.destroy();
+            UI.chart = null;
+        }
         Logic.calculateFIRE();
     },
 

@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="파이어맵(FIRE Map)은 당신의 경제적 자유와 은퇴 설계를 돕는 정밀 시뮬레이션 계산기입니다. 원금 보존에서 소진까지 나만의 은퇴 전략을 세워보세요.">
+    <meta name="keywords" content="FIRE, 은퇴계획, 노후설계, 파이어족, 자산성장시기, 조기은퇴, 노후자금계산기">
     <title>파이어맵 (FIRE Map) | 은퇴 설계 네비게이션</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,7 +14,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
         rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.263.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <style>
@@ -196,7 +199,8 @@
                                         data-lucide="user" size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="birthDate" class="compact-month-input" placeholder="예: 1980-01">
+                            <input type="text" id="birthDate" class="compact-month-input" placeholder="예: 1980-01"
+                                inputmode="numeric">
                         </div>
                     </div>
 
@@ -206,7 +210,8 @@
                                         size="14"></i></span></label>
                         </div>
                         <div class="input-field-wrapper">
-                            <input type="text" id="retirementDate" class="compact-month-input" placeholder="예: 2042-12">
+                            <input type="text" id="retirementDate" class="compact-month-input" placeholder="예: 2042-12"
+                                inputmode="numeric">
                         </div>
                     </div>
 
@@ -276,7 +281,7 @@
                         </div>
                         <div class="input-field-wrapper">
                             <input type="text" id="pensionStartDate" class="compact-month-input"
-                                placeholder="예: 2040-01">
+                                placeholder="예: 2040-01" inputmode="numeric">
                         </div>
                     </div>
 
@@ -366,10 +371,8 @@
                 <span style="color: var(--text-muted);">|</span>
                 <span style="color: var(--text-muted);">카페: <a href="https://cafe.naver.com/retireclass" target="_blank"
                         style="color: var(--primary); text-decoration: none; font-weight: 600;">cafe.naver.com/retireclass</a></span>
-                <span style="color: var(--text-muted);">|</span>
-                <span style="color: var(--text-muted); font-weight: 500;">본 프로그램은 자유롭게 사용 및 배포가 가능합니다. ✅</span>
-                <span style="color: var(--text-muted);">|</span>
-                <span style="color: var(--text-muted); font-size: 0.8rem; opacity: 0.7;">v0.9.3</span>
+                <span style="color: var(--text-muted); font-weight: 500;">| 본 프로그램은 자유롭게 사용 및 배포가 가능합니다. ✅</span>
+                <span style="color: var(--text-muted); font-size: 0.8rem; opacity: 0.7;">v0.9.5</span>
             </div>
         </footer>
     </div>

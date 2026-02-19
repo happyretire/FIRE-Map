@@ -180,6 +180,10 @@ body {
     box-shadow: var(--shadow);
 }
 
+.btn-action:active {
+    transform: translateY(0) scale(0.96);
+}
+
 /* Progress Journey Card */
 .card-progress {
     background: var(--bg-card);
@@ -481,9 +485,30 @@ body {
 /* Main Layout Grid */
 .app-grid {
     display: grid;
-    grid-template-columns: minmax(300px, 360px) 1fr;
+    grid-template-columns: 360px 1fr;
     gap: 2rem;
     align-items: flex-start;
+}
+
+@media (max-width: 850px) {
+    .app-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar .card {
+        position: static;
+        width: 100%;
+    }
+
+    .strategy-details-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .economic-parameters-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
 }
 
 /* Sidebar Inputs */
@@ -541,8 +566,8 @@ input:focus {
     outline: none;
     border-color: var(--primary);
     background: var(--bg-card);
-    box-shadow: 0 0 0 4px var(--accent-light);
-    transform: translateY(-1px);
+    box-shadow: 0 0 0 4px var(--accent-light), 0 4px 12px rgba(2, 132, 199, 0.1);
+    transform: translateY(-2px);
 }
 
 input:focus-visible {
