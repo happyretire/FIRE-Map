@@ -151,18 +151,35 @@ const Utils = {
 const Renderer = {
     updateResultIndicators(fireAge, targetAge, currentAge, fireNumber, finalBalanceAdjusted, currentSavings) {
         const d = UI.displays;
-        if (fireAge !== null) {
+        const alreadyAchieved = currentSavings >= fireNumber;
+        const pastRetirement = currentAge >= targetAge;
+
+        if (alreadyAchieved && pastRetirement) {
+            // 이미 은퇴 시점을 지났고 자산도 충분한 경우
+            d.yearsToFire.textContent = '달성 완료';
+            d.ageAtFire.textContent = '은퇴 목표 이미 달성';
+            d.yearsToGo.textContent = '이미 충분한 자산을 확보하셨습니다';
+            d.statusMessage.textContent = '축하합니다! 경제적 자유를 이루셨습니다.';
+        } else if (alreadyAchieved) {
+            // 아직 은퇴 전이지만 자산이 이미 충분한 경우
+            d.yearsToFire.textContent = '달성 완료';
+            d.ageAtFire.textContent = '목표 달성 완료';
+            d.yearsToGo.textContent = '이미 충분한 자산을 확보하셨습니다';
+            d.statusMessage.textContent = '축하합니다! 경제적 자유를 이루셨습니다.';
+        } else if (fireAge !== null && fireAge > currentAge) {
+            // 미래에 목표 달성 가능한 경우
             const yearsToFire = fireAge - currentAge;
             d.yearsToFire.textContent = Utils.formatAge(yearsToFire) + '년';
             d.ageAtFire.textContent = `${Utils.formatAge(fireAge)}세에 목표 달성 예상`;
             d.yearsToGo.textContent = `목표 은퇴 시점(${Utils.formatAge(targetAge)}세)보다 빠른 달성이 가능합니다`;
             d.statusMessage.textContent = '현재 계획대로면 조기 은퇴도 가능해 보입니다!';
         } else {
-            if (currentSavings >= fireNumber) {
-                d.yearsToFire.textContent = '달성 완료';
-                d.ageAtFire.textContent = '목표 달성 완료';
-                d.yearsToGo.textContent = '이미 충분한 자산을 확보하셨습니다';
-                d.statusMessage.textContent = '축하합니다! 경제적 자유를 이루셨습니다.';
+            // 목표 미달성
+            if (pastRetirement) {
+                d.yearsToFire.textContent = '목표 미달성';
+                d.ageAtFire.textContent = '현재 자산이 목표 금액에 미달합니다';
+                d.yearsToGo.textContent = '추가 자금 마련이나 지출 조정을 검토해 보세요';
+                d.statusMessage.textContent = '자산 보강 전략이 필요합니다.';
             } else {
                 d.yearsToFire.textContent = '목표 미달성';
                 d.ageAtFire.textContent = `${Utils.formatAge(targetAge)}세까지 목표 금액에 도달하기 어렵습니다`;
@@ -475,25 +492,19 @@ const Logic = {
         Renderer.updateResultIndicators(fireAge, targetAge, currentAge, fireNumber, balanceAdjusted, currentSavings);
 
         let suggestion = null;
-        if ((fireAge === null || fireAge > targetAge) && currentSavings < fireNumber) {
-            const yearsLeft = targetAge - currentAge;
-            if (yearsLeft > 0) {
-                const r = realReturn / 12, n = yearsLeft * 12;
-                const targetIdx = labels.indexOf(targetAge);
-                const currentExpectedAtTarget = targetIdx !== -1 ? balancesAdjusted[targetIdx] : 0;
-                const shortFall = Math.max(0, fireNumber - currentExpectedAtTarget);
-                if (shortFall > 0 && r > 0) {
-                    suggestion = { extraMonthly: shortFall * (r / (Math.pow(1 + r, n) - 1)) };
-                }
+        const yearsLeft = targetAge - currentAge;
+        if ((fireAge === null || fireAge > targetAge) && currentSavings < fireNumber && yearsLeft > 0) {
+            const r = realReturn / 12, n = yearsLeft * 12;
+            const targetIdx = labels.indexOf(targetAge);
+            const currentExpectedAtTarget = targetIdx !== -1 ? balancesAdjusted[targetIdx] : 0;
+            const shortFall = Math.max(0, fireNumber - currentExpectedAtTarget);
+            if (shortFall > 0 && r > 0) {
+                suggestion = { extraMonthly: shortFall * (r / (Math.pow(1 + r, n) - 1)) };
             }
             if (!suggestion) { suggestion = { neverReached: true }; }
-            if (yearsLeft > 0) {
-                const targetIdx = labels.indexOf(targetAge);
-                const currentExpectedAtTarget = targetIdx !== -1 ? balancesAdjusted[targetIdx] : 0;
-                if (currentExpectedAtTarget > 0 && currentExpectedAtTarget < fireNumber) {
-                    if (!suggestion) suggestion = {};
-                    suggestion.extraReturn = (Math.pow(fireNumber / currentExpectedAtTarget, 1 / yearsLeft) - 1) * 100;
-                }
+            if (currentExpectedAtTarget > 0 && currentExpectedAtTarget < fireNumber) {
+                if (!suggestion) suggestion = {};
+                suggestion.extraReturn = (Math.pow(fireNumber / currentExpectedAtTarget, 1 / yearsLeft) - 1) * 100;
             }
         }
 
